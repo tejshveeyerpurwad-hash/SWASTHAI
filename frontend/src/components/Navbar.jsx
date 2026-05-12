@@ -1,0 +1,310 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { 
+  HeartPulse, User, LogOut, Menu, X, Shield, 
+  Activity, Truck, Scan, Home, Globe, Droplets, Mic, BookOpen,
+  WifiOff, Wifi
+} from 'lucide-react';
+
+export default function Navbar() {
+  const { user, logout } = useAuth();
+  const { lang, setLang, t } = useLanguage();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  const handleHomeClick = (e) => {
+    e.preventDefault();
+    if (user) {
+      if (user.role === 'villager') navigate('/villager');
+      else if (user.role === 'ngo') navigate('/ngo');
+      else if (user.role === 'admin') navigate('/admin');
+      else navigate('/');
+    } else {
+      navigate('/');
+    }
+  };
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 15);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const goOnline  = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener('online',  goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online',  goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
+  const languages = [
+    { code: 'hi', label: 'हिन्दी' },
+    { code: 'en', label: 'English' },
+    { code: 'mr', label: 'मराठी' },
+    { code: 'ta', label: 'தமிழ்' },
+    { code: 'te', label: 'తెలుగు' }
+  ];
+
+  const villagerLinks = (t) => [
+    { name: t.nav?.home || 'Home',            path: '/villager',       icon: Home     },
+    { name: t.nav?.check_symptoms || 'Symptom Check',   path: '/symptoms',       icon: Activity },
+    { name: t.nav?.skin_care || 'Skin Scan',       path: '/skin-disease',   icon: Scan     },
+    { name: t.nav?.ambulance || 'Ambulance',       path: '/ambulance',      icon: Truck    },
+    { name: t.nav?.menstrual_health || 'Menstrual',       path: '/menstrual-health', icon: Droplets },
+  ];
+
+  const ngoLinks = (t) => [
+    { name: t.nav?.home || 'Dashboard',       path: '/ngo',            icon: Home     },
+    { name: t.ngo?.maternal_care || 'Maternal Care',   path: '/ngo/maternal',   icon: HeartPulse },
+    { name: t.ngo?.child_nutrition || 'Child Nutrition', path: '/ngo/child-nutrition', icon: Activity },
+  ];
+
+  const isActive = (path) => location.pathname === path;
+
+  return (
+    <nav className={`sticky top-0 z-[100] transition-all duration-300 w-full ${
+      isScrolled 
+        ? 'py-3 bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-xl' 
+        : 'py-4 bg-white border-b border-slate-100'
+    }`}>
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 flex items-center justify-between gap-4">
+        
+        {/* Logo */}
+        <div onClick={handleHomeClick} className="flex items-center gap-3 group cursor-pointer shrink-0">
+          <div className="w-10 h-10 bg-emerald-600 flex items-center justify-center rounded-xl shadow-lg group-hover:rotate-12 transition-transform">
+            <HeartPulse className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex flex-col leading-none">
+            <span className="text-lg font-black text-slate-900 tracking-tighter uppercase group-hover:text-emerald-700 transition-colors">
+              SwasthAI <span className="text-emerald-600 font-medium">Guardian</span>
+            </span>
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+              Rural Health Network
+            </span>
+          </div>
+        </div>
+
+        {/* Villager Navigation Links */}
+        {user && user.role === 'villager' && (
+          <div className="hidden xl:flex items-center gap-1">
+            {villagerLinks(t).map(link => (
+              <Link 
+                key={link.path}
+                to={link.path}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                  isActive(link.path)
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                    : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-50'
+                }`}
+              >
+                <link.icon className="w-3.5 h-3.5" />
+                {link.name}
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* NGO Navigation Links */}
+        {user && user.role === 'ngo' && (
+          <div className="hidden xl:flex items-center gap-1">
+            {ngoLinks(t).map(link => (
+              <Link 
+                key={link.path}
+                to={link.path}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                  isActive(link.path)
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                    : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-50'
+                }`}
+              >
+                <link.icon className="w-3.5 h-3.5" />
+                {link.name}
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Admin links */}
+        {user && user.role === 'admin' && (
+          <div className="hidden xl:flex items-center gap-1">
+            <Link to="/admin" className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all ${isActive('/admin') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-50'}`}>
+              <Home className="w-3.5 h-3.5" /> {t.nav?.admin_hub || 'District Hub'}
+            </Link>
+          </div>
+        )}
+
+        {/* Right Section */}
+        <div className="flex items-center gap-2 shrink-0">
+
+          {/* Language Selector */}
+          <div className="flex items-center px-1">
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              className="bg-slate-100/80 border border-slate-200 text-emerald-700 text-xs sm:text-sm font-black uppercase tracking-widest rounded-xl px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              {languages.map(l => (
+                <option key={l.code} value={l.code} className="text-slate-900 font-bold uppercase tracking-widest">
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="hidden xl:block w-px h-6 bg-slate-200 mx-1" />
+
+          {/* Auth Buttons */}
+          {user ? (
+            <div className="hidden xl:flex items-center gap-2">
+              <Link
+                to="/profile"
+                className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all border ${
+                  isActive('/profile')
+                    ? 'bg-emerald-600 text-white border-emerald-600'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-400 hover:text-emerald-600'
+                }`}
+                title="My Profile"
+              >
+                <User className="w-4 h-4" />
+              </Link>
+              <button 
+                onClick={logout}
+                className="w-9 h-9 flex items-center justify-center bg-slate-900 text-white rounded-xl hover:bg-rose-600 transition-all border border-slate-900"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" className="hidden xl:block px-5 py-2.5 bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
+              {t.login || 'Sign In'}
+            </Link>
+          )}
+
+          {/* Mobile Menu Button */}
+          <button 
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="xl:hidden p-2.5 bg-slate-100 rounded-xl text-slate-900 border border-slate-200"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="xl:hidden absolute top-full left-0 right-0 bg-white border-b border-slate-100 shadow-2xl p-4 z-50">
+          <div className="flex flex-col gap-2">
+            
+            {/* User Profile Info in Mobile */}
+            {user && (
+              <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-2xl mb-2">
+                <div className="w-10 h-10 bg-emerald-200 text-emerald-700 rounded-xl flex items-center justify-center font-black">
+                  {(user.name || user.username || 'U')[0].toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-black text-slate-900 text-sm leading-tight">{user.name || user.username || 'User'}</p>
+                  <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">{user.role}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Villager pages in mobile */}
+            {user && user.role === 'villager' && villagerLinks(t).map(link => (
+              <Link 
+                key={link.path}
+                to={link.path}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 p-3.5 rounded-2xl text-sm font-black uppercase tracking-wide transition-all ${
+                  isActive(link.path) ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <link.icon className={`w-4 h-4 ${isActive(link.path) ? 'text-white' : 'text-emerald-600'}`} />
+                {link.name}
+              </Link>
+            ))}
+
+            {/* NGO pages in mobile */}
+            {user && user.role === 'ngo' && ngoLinks(t).map(link => (
+              <Link 
+                key={link.path}
+                to={link.path}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 p-3.5 rounded-2xl text-sm font-black uppercase tracking-wide transition-all ${
+                  isActive(link.path) ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <link.icon className={`w-4 h-4 ${isActive(link.path) ? 'text-white' : 'text-emerald-600'}`} />
+                {link.name}
+              </Link>
+            ))}
+
+            {/* Admin pages in mobile */}
+            {user && user.role === 'admin' && (
+              <Link 
+                to="/admin" 
+                onClick={() => setMobileMenuOpen(false)} 
+                className={`flex items-center gap-3 p-3.5 rounded-2xl text-sm font-black uppercase tracking-wide transition-all ${
+                  isActive('/admin') ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Home className={`w-4 h-4 ${isActive('/admin') ? 'text-white' : 'text-emerald-600'}`} /> {t.nav?.admin_hub || 'District Hub'}
+              </Link>
+            )}
+
+            {/* Profile Link (for all roles) */}
+            {user && (
+              <Link 
+                to="/profile" 
+                onClick={() => setMobileMenuOpen(false)} 
+                className={`flex items-center gap-3 p-3.5 rounded-2xl text-sm font-black uppercase tracking-wide transition-all ${
+                  isActive('/profile') ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <User className={`w-4 h-4 ${isActive('/profile') ? 'text-white' : 'text-emerald-600'}`} /> {t.nav?.profile || 'My Profile'}
+              </Link>
+            )}
+
+            {/* Logout */}
+            {user && (
+              <button 
+                onClick={() => { setMobileMenuOpen(false); logout(); }}
+                className="flex items-center justify-center gap-3 p-3.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl font-black uppercase tracking-wide mt-2 w-full text-sm transition-colors border border-rose-100"
+              >
+                <LogOut className="w-4 h-4" />
+                {t.logout || 'Secure Logout'}
+              </button>
+            )}
+
+            {/* Not logged in */}
+            {!user && (
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-3 p-3.5 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-wide text-sm mt-2 shadow-lg shadow-emerald-200">
+                {t.login || 'Sign In'}
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Offline Status Banner — shows below nav when no internet */}
+      {!isOnline && (
+        <div className="w-full bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center gap-2">
+          <WifiOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+          <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest flex-1">
+            {t.nav?.offline_mode || 'Offline Mode'} — {t.nav?.offline_desc || 'Symptom Checker works. Voice & AI need internet.'}
+          </p>
+          <span className="text-[9px] text-amber-400 font-medium shrink-0">No data used</span>
+        </div>
+      )}
+    </nav>
+  );
+}

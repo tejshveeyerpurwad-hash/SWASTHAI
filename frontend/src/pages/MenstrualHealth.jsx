@@ -1,0 +1,440 @@
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Navbar from '../components/Navbar';
+import {
+  Package, MessageCircle, HeartPulse, BookOpen,
+  Mic, AlertTriangle, CheckCircle, Send, X,
+  Droplets, Zap, PhoneCall, MapPin, ShieldCheck,
+  Bot, User, Loader
+} from 'lucide-react';
+import api from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
+
+/* ── Pad Request ── */
+function PadRequest() {
+  const { t } = useLanguage();
+  const [village, setVillage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      await api.post('/villager/pad-request', { village });
+      setSuccess(true);
+    } catch (err) {
+      setError(err.response?.data?.error || 'No Internet? Please tell your ASHA worker directly if you need pads immediately.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (success) return (
+    <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+      className="flex flex-col items-center text-center py-12">
+      <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mb-6 shadow-xl shadow-emerald-200">
+        <CheckCircle className="w-10 h-10 text-white" />
+      </div>
+      <h3 className="text-2xl font-black text-slate-900 mb-2">{t.menstrual?.request_sent || 'Request Sent!'}</h3>
+      <p className="text-slate-500 font-medium mb-6 max-w-sm">{t.menstrual?.request_sent_desc || 'Your ASHA worker has been notified and will contact you shortly. Your request is completely private.'}</p>
+      <button onClick={() => { setSuccess(false); setVillage(''); }}
+        className="px-6 py-3 bg-slate-100 text-slate-700 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-rose-50 hover:text-rose-700 transition-colors">
+        {t.menstrual?.send_another || 'Send Another Request'}
+      </button>
+    </motion.div>
+  );
+
+  return (
+    <div className="max-w-md mx-auto">
+      <div className="mb-8">
+        <h2 className="text-2xl font-black text-slate-900 mb-2">{t.menstrual?.request_pads_title || 'Request Sanitary Pads'}</h2>
+        <p className="text-slate-500 font-medium text-sm">{t.menstrual?.request_pads_desc || 'Your ASHA worker will deliver pads privately to your location. This request is completely confidential.'}</p>
+      </div>
+      <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl mb-6 flex items-start gap-3">
+        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+        <p className="text-xs font-bold text-emerald-800">{t.menstrual?.private_note || '100% Private — Only your assigned ASHA worker can see this request. No one else will know.'}</p>
+      </div>
+      {error && <p className="mb-4 text-sm text-rose-600 font-bold bg-rose-50 p-3 rounded-xl">{error}</p>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.menstrual?.your_village || 'Your Village / Area'}</label>
+          <div className="relative group">
+            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-rose-500 transition-colors" />
+            <input value={village} onChange={e => setVillage(e.target.value)} required
+              placeholder={t.menstrual?.village_placeholder || 'e.g. Rampur, Sector 4'}
+              className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-sm focus:border-rose-400 focus:ring-4 focus:ring-rose-500/5 outline-none transition-all placeholder:text-slate-300" />
+          </div>
+        </div>
+        <button type="submit" disabled={loading}
+          className="w-full py-4 bg-rose-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2 disabled:opacity-50">
+          {loading ? <><Loader className="w-4 h-4 animate-spin" /> {t.services.analyzing}</> : <><Package className="w-4 h-4" /> {t.menstrual?.request_btn || 'Request Pads from ASHA Worker'}</>}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/* ── Groq AI Health Assistant ── */
+function HealthAssistant() {
+  const { t } = useLanguage();
+  const [messages, setMessages] = useState([
+    { role: 'ai', text: t.menstrual?.sakhi_welcome || "Hello! I'm Sakhi, your Women's Health Assistant. I'm here to answer any questions about menstrual health, hygiene, pain, or when to see a doctor. Everything you share is completely private. How can I help you today?" }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+    const userMsg = input.trim();
+    setInput('');
+    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setLoading(true);
+    try {
+      const res = await api.post('/health-assistant', { message: userMsg });
+      setMessages(prev => [...prev, { role: 'ai', text: res.data.reply }]);
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        role: 'ai',
+        text: err.response?.data?.error || t.menstrual?.sakhi_error || 'I could not process your question right now. Please try again, or contact your ASHA worker for immediate help.',
+        isError: true
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startVoice = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { 
+      setMessages(prev => [...prev, { role: 'ai', text: 'Voice input is not supported on this device. Please type your message.', isError: true }]);
+      return;
+    }
+    const rec = new SR();
+    rec.lang = 'hi-IN';
+    rec.onstart = () => setIsListening(true);
+    rec.onresult = (e) => { setInput(e.results[0][0].transcript); setIsListening(false); };
+    rec.onerror = () => setIsListening(false);
+    rec.start();
+  };
+
+  const suggestions = t.menstrual?.sakhi_suggestions || ['How do I manage period pain?', 'What is heavy bleeding?', 'How often should I change pads?', 'My periods are irregular'];
+
+  return (
+    <div className="flex flex-col h-[400px] md:h-[560px]">
+      <div className="mb-4 p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3">
+        <div className="w-8 h-8 bg-rose-600 rounded-xl flex items-center justify-center shrink-0">
+          <Bot className="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <p className="font-black text-rose-900 text-xs uppercase tracking-widest">Sakhi-AI Health Assistant</p>
+        </div>
+        <div className="ml-auto flex items-center gap-1.5">
+          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+          <span className="text-[10px] font-black text-emerald-700 uppercase">Live</span>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 pr-1">
+        {messages.map((m, i) => (
+          <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            {m.role === 'ai' && (
+              <div className="w-7 h-7 bg-rose-100 rounded-full flex items-center justify-center shrink-0 mt-1">
+                <Bot className="w-3.5 h-3.5 text-rose-600" />
+              </div>
+            )}
+            <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm font-medium leading-relaxed ${
+              m.role === 'user'
+                ? 'bg-rose-600 text-white rounded-tr-sm'
+                : m.isError
+                ? 'bg-red-50 border border-red-200 text-red-800 rounded-tl-sm'
+                : 'bg-white border border-slate-100 text-slate-700 shadow-sm rounded-tl-sm'
+            }`}>
+              {m.text}
+            </div>
+            {m.role === 'user' && (
+              <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center shrink-0 mt-1">
+                <User className="w-3.5 h-3.5 text-slate-600" />
+              </div>
+            )}
+          </motion.div>
+        ))}
+        {loading && (
+          <div className="flex gap-3">
+            <div className="w-7 h-7 bg-rose-100 rounded-full flex items-center justify-center shrink-0">
+              <Bot className="w-3.5 h-3.5 text-rose-600" />
+            </div>
+            <div className="px-4 py-3 bg-white border border-slate-100 rounded-2xl rounded-tl-sm shadow-sm">
+              <div className="flex gap-1">
+                {[0,1,2].map(i => <div key={i} className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{animationDelay:`${i*0.15}s`}}/>)}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Quick suggestions */}
+      {messages.length === 1 && (
+        <div className="flex flex-wrap gap-2 mt-3">
+          {suggestions.map(s => (
+            <button key={s} onClick={() => setInput(s)}
+              className="px-3 py-1.5 bg-rose-50 border border-rose-100 text-rose-700 text-xs font-bold rounded-full hover:bg-rose-100 transition-colors">
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="mt-3 flex items-center gap-2 p-2 bg-white border-2 border-slate-100 rounded-2xl focus-within:border-rose-300 transition-colors">
+        <button onClick={startVoice}
+          className={`p-2.5 rounded-xl transition-all ${isListening ? 'bg-rose-600 text-white animate-pulse' : 'bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500'}`}>
+          <Mic className="w-4 h-4" />
+        </button>
+        <input value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSend()}
+          placeholder="Ask me anything about your health..."
+          className="flex-1 bg-transparent outline-none text-sm font-medium text-slate-700 placeholder:text-slate-300" />
+        <button onClick={handleSend} disabled={loading || !input.trim()}
+          className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-rose-600 transition-all disabled:opacity-30 active:scale-95">
+          <Send className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Symptom Checkup ── */
+function MenstrualCheckup() {
+  const { t } = useLanguage();
+  const [selected, setSelected] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const questions = [
+    { id: 'heavy',     label: 'Very heavy bleeding',            sub: 'Changing pad every 1-2 hours',     severe: true  },
+    { id: 'pain',      label: 'Severe abdominal pain',          sub: 'Pain that stops daily activities',  severe: false },
+    { id: 'dizzy',     label: 'Dizziness or fainting',          sub: 'Feeling lightheaded or weak',       severe: true  },
+    { id: 'fever',     label: 'Fever with periods',             sub: 'Temperature above 38°C',            severe: true  },
+    { id: 'irregular', label: 'Irregular or missed periods',    sub: 'Cycle shorter than 21 or longer than 35 days', severe: false },
+    { id: 'clots',     label: 'Large blood clots',              sub: 'Clots larger than a coin',          severe: true  },
+  ];
+
+  const toggle = id => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+
+  const analyze = () => {
+    setLoading(true);
+    setResult(null);
+    setTimeout(() => {
+      const hasSevere = selected.some(id => questions.find(q => q.id === id)?.severe);
+      if (hasSevere) setResult({ 
+        type: 'danger', 
+        title: 'Immediate Action Needed', 
+        msg: 'These symptoms could be serious. Please call 108 (Free Ambulance) or find your ASHA worker immediately.',
+        show108: true 
+      });
+      else if (selected.length > 0) setResult({ type: 'warning', title: 'Seek Advice', msg: 'These symptoms should be discussed with your ASHA worker today.' });
+      else setResult({ type: 'safe', title: 'Doing Well', msg: 'No urgent symptoms. Remember to rest and drink plenty of water.' });
+      setLoading(false);
+    }, 1500);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-black text-slate-900 mb-2">{t.menstrual?.symptom_title || 'Symptom Check'}</h2>
+        <p className="text-slate-500 font-medium text-sm">{t.menstrual?.symptom_desc || 'Select any symptoms you are currently experiencing. This is not a diagnosis - always consult a doctor for medical advice.'}</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {questions.map(q => (
+          <button key={q.id} onClick={() => toggle(q.id)}
+            className={`flex items-center gap-3 p-4 rounded-2xl border-2 text-left transition-all ${selected.includes(q.id) ? 'bg-rose-50 border-rose-400' : 'bg-white border-slate-100 hover:border-rose-200'}`}>
+            <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${selected.includes(q.id) ? 'bg-rose-600 border-rose-600' : 'border-slate-300'}`}>
+              {selected.includes(q.id) && <CheckCircle className="w-3 h-3 text-white" />}
+            </div>
+            <div>
+              <p className={`text-sm font-black leading-tight ${selected.includes(q.id) ? 'text-rose-900' : 'text-slate-700'}`}>{q.label}</p>
+              <p className="text-[10px] font-medium text-slate-400 mt-0.5">{q.sub}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+      <button onClick={analyze} disabled={loading || selected.length === 0}
+        className="w-full py-4 bg-slate-900 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg disabled:opacity-30 flex items-center justify-center gap-2">
+        {loading ? <><Loader className="w-4 h-4 animate-spin" /> Analyzing...</> : (t.menstrual?.check_btn || 'Check My Symptoms')}
+      </button>
+      <AnimatePresence>
+        {result && (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            className={`p-6 rounded-2xl border-2 ${result.type === 'danger' ? 'bg-red-50 border-red-200' : result.type === 'warning' ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+            <div className="flex items-center gap-3 mb-2">
+              {result.type === 'danger' ? <AlertTriangle className="w-6 h-6 text-red-600" /> : result.type === 'warning' ? <AlertTriangle className="w-6 h-6 text-amber-600" /> : <CheckCircle className="w-6 h-6 text-emerald-600" />}
+              <h3 className={`font-black text-lg ${result.type === 'danger' ? 'text-red-900' : result.type === 'warning' ? 'text-amber-900' : 'text-emerald-900'}`}>{result.title}</h3>
+            </div>
+            <p className={`font-medium text-sm leading-relaxed ${result.type === 'danger' ? 'text-red-700' : result.type === 'warning' ? 'text-amber-700' : 'text-emerald-700'}`}>{result.msg}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ── Health Tips ── */
+function HealthTips() {
+  const { t } = useLanguage();
+  const tips = [
+    { icon: Droplets, color: 'bg-rose-50 text-rose-600', title: 'Change Pads Regularly', desc: 'Change your sanitary pad every 4–6 hours to prevent infections and odor, even if flow is light.' },
+    { icon: HeartPulse, color: 'bg-emerald-50 text-emerald-600', title: 'Eat Iron-Rich Foods', desc: 'Include jaggery (gur), spinach, lentils, and dates in your diet to replenish iron lost during periods.' },
+    { icon: Zap, color: 'bg-amber-50 text-amber-600', title: 'Stay Active & Rest', desc: 'Light walks can ease cramps. Rest is equally important — listen to your body and take breaks.' },
+    { icon: ShieldCheck, color: 'bg-blue-50 text-blue-600', title: 'Wash Hands Often', desc: 'Always wash your hands with soap before and after changing pads to prevent bacterial infections.' },
+  ];
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-black text-slate-900 mb-2">{t.menstrual?.tips_title || 'Health Tips'}</h2>
+        <p className="text-slate-500 font-medium text-sm">{t.menstrual?.tips_desc || 'Simple, proven advice for your health and wellbeing during your period.'}</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {tips.map(t => (
+          <div key={t.title} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+            <div className={`w-10 h-10 ${t.color} rounded-xl flex items-center justify-center mb-4`}>
+              <t.icon className="w-5 h-5" />
+            </div>
+            <h3 className="font-black text-slate-900 text-sm mb-1">{t.title}</h3>
+            <p className="text-slate-400 font-medium text-xs leading-relaxed">{t.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Main Page ── */
+export default function MenstrualHealth() {
+  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState('assistant');
+  const [showEmergency, setShowEmergency] = useState(false);
+
+  const tabs = [
+    { id: 'assistant', label: t.menstrual?.ai_assistant || 'AI Assistant',    icon: MessageCircle },
+    { id: 'checkup',   label: t.menstrual?.symptom_check || 'Symptom Check',   icon: HeartPulse    },
+    { id: 'pads',      label: t.menstrual?.request_pads || 'Request Pads',    icon: Package       },
+    { id: 'tips',      label: t.menstrual?.health_tips || 'Health Tips',     icon: BookOpen      },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#F7F9FB] font-inter antialiased">
+      <Navbar role="villager" />
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-28 pb-24">
+
+        {/* Header */}
+        <header className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+                <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.4em]">{t.menstrual?.safe_private || 'Safe & Private'}</p>
+              </div>
+              <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+                {t.menstrual?.title || "Women's Health"}
+              </h1>
+              <p className="text-slate-500 font-medium mt-2 text-sm max-w-md leading-relaxed">
+                {t.menstrual?.subtitle || 'AI-powered health guidance, symptom checking, and free pad access - completely private and confidential.'}
+              </p>
+            </div>
+            <button onClick={() => setShowEmergency(true)}
+              className="flex items-center gap-2 px-5 py-3 bg-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all shrink-0">
+              <PhoneCall className="w-4 h-4" /> {t.menstrual?.emergency_help || 'Emergency Help'}
+            </button>
+          </div>
+        </header>
+
+        {/* Tab Nav */}
+        <div className="flex flex-wrap gap-2 mb-6 p-1.5 bg-white border border-slate-100 rounded-2xl shadow-sm w-fit">
+          {tabs.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'}`}>
+              <tab.icon className="w-3.5 h-3.5" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 md:p-10 min-h-[400px] md:min-h-[500px]">
+          <AnimatePresence mode="wait">
+            <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+              {activeTab === 'assistant' && <HealthAssistant />}
+              {activeTab === 'checkup'   && <MenstrualCheckup />}
+              {activeTab === 'pads'      && <PadRequest />}
+              {activeTab === 'tips'      && <HealthTips />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </main>
+
+      {/* Emergency Modal */}
+      <AnimatePresence>
+        {showEmergency && (
+          <div className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 30 }}
+              className="w-full max-w-md bg-white rounded-[2rem] p-8 shadow-2xl border border-slate-100">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-rose-600 text-white rounded-2xl">
+                    <PhoneCall className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-900 text-lg">{t.menstrual?.emergency_title || 'Emergency Help'}</h3>
+                    <p className="text-xs text-slate-400 font-medium">Your ASHA worker will be notified</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowEmergency(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-6 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100">
+                    <HeartPulse className="w-5 h-5 text-rose-600" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ASHA Worker</p>
+                    <p className="font-black text-slate-900 text-sm">Sita Devi</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <span className="text-[10px] font-black text-emerald-700 uppercase">Available</span>
+                </div>
+              </div>
+              <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
+                {t.menstrual?.emergency_desc || 'Press the button below to immediately alert your ASHA worker. She will call you and come to help.'}
+              </p>
+              <div className="space-y-3">
+                <button onClick={() => { alert('Emergency alert sent to your ASHA worker. She will contact you shortly.'); setShowEmergency(false); }}
+                  className="w-full py-4 bg-rose-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg active:scale-95">
+                  {t.menstrual?.alert_asha || 'Alert My ASHA Worker Now'}
+                </button>
+                <a href="tel:108" className="flex items-center justify-center gap-2 w-full py-3.5 bg-slate-900 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-slate-700 transition-all">
+                  <PhoneCall className="w-4 h-4" /> {t.menstrual?.call_ambulance || 'Call 108-Free Ambulance'}
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
