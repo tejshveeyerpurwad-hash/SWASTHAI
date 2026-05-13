@@ -2,6 +2,7 @@ services:
   - type: web
     name: swasthai-guardian
     runtime: node
+    plan: free
     buildCommand: npm run install-all && npm run build
     startCommand: npm start
     envVars:
@@ -10,8 +11,4 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: DATA_DIR
-        value: /opt/render/project/src/backend/data
-    disk:
-      name: swasthai-db
-      mountPath: /opt/render/project/src/backend/data
-      sizeGB: 1
+        value: .
