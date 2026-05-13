@@ -812,6 +812,7 @@ Rules: respond in user's language; never diagnose; be warm and concise (3-5 sent
   });
 
   // Health check — used by docker-compose, load balancers, and monitoring
+  // Health check — used by docker-compose, load balancers, and monitoring
   app.get('/api/health', (req, res) => {
     res.json({
       status: 'ok',
@@ -822,6 +823,21 @@ Rules: respond in user's language; never diagnose; be warm and concise (3-5 sent
     });
   });
 
-    app.listen(PORT, () => console.log(`Security Engine running on node ${PORT} (Worker ${process.pid})`));
-  })();
+  // ── STATIC FILE SERVING (Production) ──────────────────────────────────
+  const __dirname = path.resolve();
+  if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
+
+    app.get('*', (req, res) => {
+      // API routes should not be caught by static file server
+      if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(__dirname, 'frontend', 'dist', 'index.html'));
+      }
+    });
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 SwasthAI Core active on port ${PORT} (Mode: ${process.env.NODE_ENV || 'development'})`);
+  });
+})();
 }

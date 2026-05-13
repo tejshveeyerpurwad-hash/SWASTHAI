@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 // Uses VITE_API_URL in production (set in Vercel dashboard), falls back to localhost for local dev
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Use relative path in production to work with unified deployment, fallback to localhost for dev
+const BASE_URL = import.meta.env.MODE === 'production' 
+  ? '/api' 
+  : (import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
 
 const api = axios.create({
   baseURL: BASE_URL,
