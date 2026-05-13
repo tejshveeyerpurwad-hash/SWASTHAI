@@ -24,27 +24,6 @@ export default function LandingPage() {
       
       <Navbar />
 
-      {/* STICKY EMERGENCY BUTTON (CRITICAL - RULE #4) */}
-      <AnimatePresence>
-        {scrolled && (
-          <motion.button
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            onClick={() => navigate('/ambulance')}
-            className="fixed bottom-4 right-4 z-[100] bg-red-600 text-white px-5 py-3.5 sm:px-8 sm:py-5 rounded-full font-black uppercase tracking-widest shadow-[0_20px_50px_rgba(220,38,38,0.4)] flex items-center gap-3 sm:gap-4 hover:bg-red-700 transition-all active:scale-95 group border-2 sm:border-4 border-white"
-          >
-            <motion.div 
-               animate={{ scale: [1, 1.2, 1] }}
-               transition={{ repeat: Infinity, duration: 2 }}
-               className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-full flex items-center justify-center"
-            >
-              <PhoneCall className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </motion.div>
-            <span className="text-[10px] sm:text-sm">Emergency</span>
-          </motion.button>
-        )}
-      </AnimatePresence>
 
       {/* HERO SECTION */}
       <section className="relative pt-24 pb-12 sm:pt-32 sm:pb-20 lg:pt-52 lg:pb-32 px-6 overflow-hidden">

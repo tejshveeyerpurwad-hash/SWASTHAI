@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  HeartPulse, ShieldCheck, PhoneCall, Mail, MapPin, 
+import {
+  HeartPulse, ShieldCheck, PhoneCall, Mail, MapPin,
   Activity, Award, Home, Scan, Truck, Droplets, User, Mic
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Footer() {
   const { t } = useLanguage();
-  
+
   return (
     <footer className="relative bg-[#020617] text-white overflow-hidden pt-16 pb-8 px-6 border-t border-white/5">
       {/* Background decoration */}
@@ -17,7 +17,7 @@ export default function Footer() {
 
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10 lg:gap-12 border-b border-white/5 pb-12">
-          
+
           {/* BRAND COLUMN */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
@@ -39,7 +39,7 @@ export default function Footer() {
             <div className="flex flex-wrap gap-2">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
                 <Award className="w-3 h-3 text-emerald-500" />
-                <span className="text-[9px] font-black uppercase tracking-tighter text-slate-300">Hackathon Project</span>
+                <span className="text-[9px] font-black uppercase tracking-tighter text-slate-300">Healthcare for All</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
                 <Activity className="w-3 h-3 text-emerald-500" />
@@ -55,12 +55,12 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               {[
-                { name: 'Home Dashboard',   path: '/villager',          icon: Home     },
-                { name: 'Symptom Checker',  path: '/symptoms',          icon: Activity },
-                { name: 'Skin Scan AI',     path: '/skin-disease',      icon: Scan     },
-                { name: 'Ambulance Request',path: '/ambulance',         icon: Truck    },
-                { name: 'Menstrual Health', path: '/menstrual-health',  icon: Droplets },
-                { name: 'My Profile',       path: '/profile',           icon: User     },
+                { name: 'Home Dashboard', path: '/villager', icon: Home },
+                { name: 'Symptom Checker', path: '/symptoms', icon: Activity },
+                { name: 'Skin Scan AI', path: '/skin-disease', icon: Scan },
+                { name: 'Ambulance Request', path: '/ambulance', icon: Truck },
+                { name: 'Menstrual Health', path: '/menstrual-health', icon: Droplets },
+                { name: 'My Profile', path: '/profile', icon: User },
               ].map(item => (
                 <li key={item.name} className="group">
                   <Link to={item.path} className="text-slate-400 font-bold hover:text-white transition-colors text-sm flex items-center gap-3 cursor-pointer">
