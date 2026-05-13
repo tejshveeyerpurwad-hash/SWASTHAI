@@ -123,9 +123,9 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Villager Navigation Links */}
+        {/* Villager Navigation Links (Desktop Only) */}
         {user && user.role === 'villager' && (
-          <div className="hidden xl:flex items-center gap-1">
+          <div className="hidden 2xl:flex items-center gap-1">
             {villagerLinks(t).map(link => (
               <Link 
                 key={link.path}
@@ -143,9 +143,9 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* NGO Navigation Links */}
+        {/* NGO Navigation Links (Desktop Only) */}
         {user && user.role === 'ngo' && (
-          <div className="hidden xl:flex items-center gap-1">
+          <div className="hidden 2xl:flex items-center gap-1">
             {ngoLinks(t).map(link => (
               <Link 
                 key={link.path}

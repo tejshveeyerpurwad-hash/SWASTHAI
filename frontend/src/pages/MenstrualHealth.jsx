@@ -343,18 +343,37 @@ function HealthAssistant() {
       )}
 
       {/* Input */}
-      <div className="mt-3 flex items-center gap-2 p-2 bg-white border-2 border-slate-100 rounded-2xl focus-within:border-rose-300 transition-colors">
-        <button onClick={startVoice}
-          className={`p-2.5 rounded-xl transition-all ${isListening ? 'bg-rose-600 text-white animate-pulse' : 'bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500'}`}>
-          <Mic className="w-4 h-4" />
+      <div className="mt-3 flex items-center gap-2 p-2 bg-white border-2 border-slate-100 rounded-2xl focus-within:border-rose-300 transition-all relative z-10">
+        <button 
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startVoice();
+          }}
+          className={`p-3 rounded-xl transition-all active:scale-90 relative z-20 ${
+            isListening 
+              ? 'bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-200' 
+              : 'bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500'
+          }`}
+          title="Speak now"
+        >
+          <Mic className="w-5 h-5" />
         </button>
-        <input value={input} onChange={e => setInput(e.target.value)}
+        <input 
+          value={input} 
+          onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
           placeholder={isOnline ? 'Ask me anything about your health...' : 'No internet — see verified tips above ↑'}
           disabled={!isOnline}
-          className="flex-1 bg-transparent outline-none text-sm font-medium text-slate-700 placeholder:text-slate-300 disabled:opacity-50" />
-        <button onClick={handleSend} disabled={loading || !input.trim() || !isOnline}
-          className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-rose-600 transition-all disabled:opacity-30 active:scale-95">
+          className="flex-1 bg-transparent outline-none text-sm font-medium text-slate-700 placeholder:text-slate-300 disabled:opacity-50 h-11" 
+        />
+        <button 
+          type="button"
+          onClick={handleSend} 
+          disabled={loading || !input.trim() || !isOnline}
+          className="p-3 bg-slate-900 text-white rounded-xl hover:bg-rose-600 transition-all disabled:opacity-30 active:scale-95 shadow-sm"
+        >
           <Send className="w-4 h-4" />
         </button>
       </div>

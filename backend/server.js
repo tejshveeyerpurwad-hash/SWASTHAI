@@ -614,7 +614,8 @@ if (cluster.isPrimary) {
 
     if (!groqKey || groqKey === 'your_groq_api_key_here') {
       return res.send({
-        reply: "I'm Sakhi, your Women's Health Assistant. I can answer questions about menstrual health, hygiene, pain management, and when to see a doctor."
+        reply: "Hello! I'm Sakhi. My advanced AI brain is currently being updated to better serve you. For now, please refer to the verified health tips above or contact your local ASHA worker for any health concerns. I'll be back fully soon!",
+        grounded: false
       });
     }
 
