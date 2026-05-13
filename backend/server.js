@@ -53,7 +53,8 @@ if (cluster.isPrimary) {
     origin: (origin, callback) => {
       // Allow all origins in development or if explicitly whitelisted
       const isDev = process.env.NODE_ENV !== 'production';
-      if (!origin || isDev || allowedOrigins.includes(origin)) return callback(null, true);
+      const isRender = origin && origin.endsWith('.onrender.com');
+      if (!origin || isDev || isRender || allowedOrigins.includes(origin)) return callback(null, true);
       callback(new Error(`CORS: Origin ${origin} not allowed.`));
     },
     credentials: true,
