@@ -18,8 +18,8 @@
     - **V1**: Generic LLM chatbot (prone to hallucinations).
     - **V2**: Upgraded to a **Grounded RAG system**. Sakhi retrieves clinical chunks from WHO/MoHFW before answering. Cites every source. Works offline via local knowledge chunks.
 3.  **Hardened Offline-First Sync**:
-    - **V1**: Basic local storage.
-    - **V2**: Production-grade **IndexedDB + Service Worker** sync. Data collected in remote villages automatically syncs when the worker reaches a 2G/3G zone.
+    - **V1**: Basic local storage (required online login).
+    - **V2**: **Offline-First Login enabled**. If a worker is in a zero-signal zone, they can still "log in" using the demo credentials to access local features. Uses **IndexedDB + Service Worker** for persistent caching. Data automatically syncs when the worker reaches a 2G/3G zone.
 4.  **Multilingual Voice I/O**:
     - Full speech-to-text and text-to-speech support for 6 Indian languages, removing literacy barriers.
 5.  **Smart Share System (Navbar QR)**:

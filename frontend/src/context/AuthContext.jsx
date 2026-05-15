@@ -48,6 +48,23 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loginPassword = async (identifier, password, role) => {
+    // 🌐 OFFLINE LOGIN FALLBACK: Allow demo login even with zero internet
+    const isDemoPass = password === '1234' || password === 'Demo@1234' || password === 'admin';
+    if (!navigator.onLine && isDemoPass) {
+      const mockUser = {
+        id: 'offline-user-' + Date.now(),
+        name: 'Offline ' + role.toUpperCase(),
+        username: identifier.includes('@') ? identifier.split('@')[0] : identifier,
+        role: role,
+        villageId: 'v101',
+        isOfflineSession: true
+      };
+      localStorage.setItem('token', 'offline-mock-token');
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(mockUser);
+      return mockUser;
+    }
+
     try {
       const res = await api.post('/auth/login-password', {
         identifier,
@@ -68,6 +85,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loginOTP = async (phone, otp, role) => {
+    // 🌐 OFFLINE LOGIN FALLBACK: Allow demo OTP '1234' even with zero internet
+    if (!navigator.onLine && otp === '1234') {
+      const mockUser = {
+        id: 'offline-otp-user-' + Date.now(),
+        name: 'Offline ' + role.toUpperCase(),
+        username: phone,
+        role: role,
+        villageId: 'v101',
+        isOfflineSession: true
+      };
+      localStorage.setItem('token', 'offline-mock-token');
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(mockUser);
+      return mockUser;
+    }
+
     try {
       const res = await api.post('/auth/login-otp', { phone, otp, role });
       localStorage.setItem('token', res.data.token);
