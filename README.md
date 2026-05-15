@@ -131,13 +131,36 @@ We utilize a tiered ensemble approach for clinical reliability in rural settings
 
 **Safety Guardrails**: Neural Threshold (**0.70**) · RF Threshold (**0.40**) · `is_uncertain` flag
 
-> **Note on Skin Diagnostics**: SwasthAI uses a dual-mode approach. (1) The **Symptom Engine** diagnoses 'Skin Infection' based on text/voice descriptions. (2) The **Skin Analyzer** performs pixel-level analysis of actual photos using on-device PIL processing.
+#### 🖼️ Dermatology: Two Ways to Diagnose
+SwasthAI Guardian provides two independent AI systems for health diagnostics:
 
-To retrain the disease model:
+*   **Path A: Wide-Spectrum Diagnostic Engine** (via "Check Symptoms" page)
+    *   The main AI engine for all **17 supported diseases** (Malaria, Dengue, Snakebite, etc.).
+    *   It identifies "Skin Infection" as part of its general diagnostic range when described via voice/text.
+
+*   **Path B: Specialized Skin Scanner** (via "Skin Care" page)
+    *   **No Typing Required**: A dedicated, photo-based tool built specifically for dermatology.
+    *   **Hybrid Logic**: Combines pixel analysis with 3 clinical questions (Duration, Spread, Pain) for a high-confidence prediction.
+
+---
+
+---
+
+### 🧠 Model Training & Updates
+
+To retrain the high-performance **Neural Engine (SymptomNet)**:
 ```bash
 cd ai-service
-python train_disease_model.py   # regenerates disease_model.pkl + model_accuracy.txt
+python train_deep_model.py     # Generates deep_disease_model.pkl (96.8% Accuracy)
 ```
+
+To retrain the **Random Forest Fallback**:
+```bash
+cd ai-service
+python train_disease_model.py   # Generates disease_model.pkl + model_accuracy.txt
+```
+
+---
 
 ---
 
