@@ -37,6 +37,9 @@ export default function SymptomChecker() {
     { id: 'night_sweats', label: 'Night Sweats / TB Indicator रात में पसीना',              severe: false },
     { id: 'ear_pain',     label: 'Ear Pain / Discharge कान दर्द',                          severe: false },
     { id: 'eye_redness',  label: 'Eye Redness / Discharge आंख लाल होना',                   severe: false },
+    { id: 'snake_bite',   label: 'Snake Bite / Poisoning सांप का काटना',                     severe: true  },
+    { id: 'heat_stroke',  label: 'Heatstroke / Sunstroke लू लगना',                        severe: true  },
+    { id: 'itching',      label: 'Itching / Skin Infection खुजli',                       severe: false },
   ];
 
   const handleSymptomChange = (id) => {
@@ -89,6 +92,9 @@ export default function SymptomChecker() {
         night: 'night_sweats', raat: 'night_sweats', tb: 'night_sweats',
         ear: 'ear_pain', kaan: 'ear_pain',
         eye: 'eye_redness', aankh: 'eye_redness', laal: 'eye_redness',
+        snake: 'snake_bite', saamp: 'snake_bite', bite: 'snake_bite',
+        heat: 'heat_stroke', loo: 'heat_stroke', garmi: 'heat_stroke',
+        itch: 'itching', khujli: 'itching', daad: 'itching',
       };
       const matched = Object.keys(map).filter(kw => spoken.includes(kw)).map(kw => map[kw]);
       if (matched.length > 0) {
@@ -139,12 +145,15 @@ export default function SymptomChecker() {
 
     try {
       const res = await api.post('/villager/symptoms', { symptoms: symptomText });
-      const { prediction, confidence, alert: outbreakAlert } = res.data;
+      const { prediction, confidence, alert: outbreakAlert, alternatives, model, accuracy } = res.data;
       const isSevere = selectedSymptoms.some((id) => symptomList.find((s) => s.id === id)?.severe);
       setResult({
         type: isSevere ? 'severe' : 'mild',
         prediction,
         confidence: confidence ? Math.round(confidence * 100) : null,
+        alternatives,
+        model,
+        accuracy,
         alert: outbreakAlert,
         message: isSevere
           ? t.diseaseChecker?.severe_msg || 'CRITICAL: Severe symptoms detected. Go to hospital immediately.'
@@ -316,50 +325,80 @@ export default function SymptomChecker() {
           {result && result.type !== 'error' && (
             <div
               className={`p-8 rounded-[40px] shadow-2xl relative overflow-hidden border-2 animate-in slide-in-from-bottom-8 duration-700 ${
-                result.type === 'severe'
-                  ? 'bg-red-600 border-red-500 shadow-red-200'
-                  : 'bg-emerald-500 border-emerald-400 shadow-emerald-200'
+                result.is_uncertain 
+                  ? 'bg-slate-100 border-slate-300 shadow-slate-200 text-slate-900'
+                  : result.type === 'severe'
+                    ? 'bg-red-600 border-red-500 shadow-red-200 text-white'
+                    : 'bg-emerald-500 border-emerald-400 shadow-emerald-200 text-white'
               }`}
             >
               <div className="absolute right-[-20px] top-[-20px] bg-white opacity-10 w-64 h-64 rounded-full blur-3xl" />
               <div className="flex items-start md:items-center gap-6 relative z-10 flex-col md:flex-row">
-                <div className="p-5 bg-white/20 backdrop-blur-xl rounded-[24px] border border-white/30 shrink-0">
-                  <ShieldCheck className="w-10 h-10 text-white" />
+                <div className={`p-5 backdrop-blur-xl rounded-[24px] border shrink-0 ${
+                  result.is_uncertain ? 'bg-slate-200 border-slate-300' : 'bg-white/20 border-white/30'
+                }`}>
+                  {result.is_uncertain ? <AlertCircle className="w-10 h-10 text-slate-600" /> : <ShieldCheck className="w-10 h-10 text-white" />}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 w-full">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-2 h-2 rounded-full bg-white animate-ping" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/90">
-                      {result.source === 'skin' ? 'Pixel AI Analysis' : result.source === 'offline' ? 'Offline Triage' : 'AI Diagnosis'}
-                      {result.confidence ? ` · ${result.confidence}% confidence` : ''}
+                    <div className={`w-2 h-2 rounded-full animate-ping ${result.is_uncertain ? 'bg-slate-400' : 'bg-white'}`} />
+                    <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${result.is_uncertain ? 'text-slate-500' : 'text-white/90'}`}>
+                      {result.is_uncertain ? 'Safety Guardrail Active' : result.source === 'skin' ? 'Pixel AI Analysis' : result.source === 'offline' ? 'Offline Triage' : 'AI Diagnosis'}
                     </p>
-                    {/* AI model accuracy badge */}
-                    <span className="ml-auto px-2 py-0.5 rounded-lg bg-white/20 border border-white/30 text-[9px] font-black text-white/90 uppercase tracking-widest">
-                      Model: 91.3% acc
+                    <span className={`ml-auto px-2 py-0.5 rounded-lg border text-[9px] font-black uppercase tracking-widest ${
+                      result.is_uncertain ? 'bg-slate-200 border-slate-300 text-slate-600' : 'bg-white/20 border-white/30 text-white/90'
+                    }`}>
+                      {result.model || 'Hybrid Model'}
                     </span>
                   </div>
-                  {result.prediction && (
-                    <h3 className="text-2xl font-black text-white mb-1">{result.prediction}</h3>
-                  )}
-                  <p className="text-lg font-bold text-white/90 leading-relaxed">{result.message}</p>
-                  {result.markers && (
-                    <div className="mt-3 flex gap-4 flex-wrap">
-                      <span className="text-xs text-white/70 font-semibold">Redness: {result.markers.inflammation?.toFixed(2)}</span>
-                      <span className="text-xs text-white/70 font-semibold">Texture: {result.markers.texture?.toFixed(2)}</span>
-                      <span className="text-xs text-white/70 font-semibold">Irregularity: {result.markers.irregularity?.toFixed(2)}</span>
+
+                  <h3 className={`text-3xl font-black mb-2 ${result.is_uncertain ? 'text-slate-900' : 'text-white'}`}>
+                    {result.prediction}
+                  </h3>
+
+                  {/* Confidence Bar - Only show if not uncertain, or show as low */}
+                  {!result.is_uncertain && result.confidence && (
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${result.is_uncertain ? 'text-slate-400' : 'text-white/80'}`}>Confidence Meter</span>
+                        <span className={`text-sm font-black ${result.is_uncertain ? 'text-slate-600' : 'text-white'}`}>{result.confidence}%</span>
+                      </div>
+                      <div className={`w-full h-3 rounded-full overflow-hidden border ${
+                        result.is_uncertain ? 'bg-slate-200 border-slate-300' : 'bg-white/20 border-white/30'
+                      }`}>
+                        <div 
+                          className={`h-full transition-all duration-1000 ease-out ${result.is_uncertain ? 'bg-slate-400' : 'bg-white'}`}
+                          style={{ width: `${result.confidence}%` }}
+                        />
+                      </div>
                     </div>
                   )}
-                  {result.alert && (
-                    <div className="mt-3 bg-yellow-400 text-yellow-900 rounded-xl p-3 text-sm font-black">
-                      {result.alert}
+
+                  <p className={`text-lg font-bold leading-tight mb-4 ${result.is_uncertain ? 'text-slate-700' : 'text-white'}`}>
+                    {result.message}
+                  </p>
+
+                  {/* Alternatives Section */}
+                  {result.alternatives && result.alternatives.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-white/20">
+                      <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-3 italic">Clinical Alternatives to consider:</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {result.alternatives.map((alt, i) => (
+                          <div key={i} className="px-3 py-1.5 bg-white/10 rounded-xl border border-white/20 flex items-center gap-2">
+                            <span className="text-[11px] font-black text-white">{alt.disease}</span>
+                            <span className="text-[9px] font-bold text-white/60">{(alt.confidence * 100).toFixed(0)}%</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
-                  {/* 🔊 TTS: Speak result for low-literacy rural users */}
+
+                  {/* 🔊 TTS Button */}
                   <button
                     onClick={() => speakResult(`${result.prediction || ''}. ${result.message || ''}`)}     
-                    className="mt-4 flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white text-xs font-black uppercase tracking-widest transition-all border border-white/30"
+                    className="mt-6 flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-100 rounded-2xl text-slate-900 text-xs font-black uppercase tracking-widest transition-all shadow-lg"
                   >
-                    <Volume2 className="w-4 h-4" /> Speak Result
+                    <Volume2 className="w-4 h-4" /> Listen to Result
                   </button>
                 </div>
               </div>

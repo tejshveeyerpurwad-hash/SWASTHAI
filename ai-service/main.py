@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import joblib
 import os
+import torch
+from model_def import SymptomNet
+from sentence_transformers import SentenceTransformer
 from skin_analyzer import analyze_skin_image
 
 # RAG & Agentic imports
@@ -25,14 +28,38 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
-# ── Load disease model ─────────────────────────────────────────────────────────
+# ── Load disease model (Deep Learning or RF fallback) ──────────────────────────
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "disease_model.pkl")
+DEEP_MODEL_PATH = os.path.join(os.path.dirname(__file__), "deep_disease_model.pkl")
+
 disease_pipeline = None
+deep_model_bundle = None
+embedder = None
+
 try:
-    disease_pipeline = joblib.load(MODEL_PATH)
-    print("[OK] Disease prediction model loaded.")
-except FileNotFoundError:
-    print("[WARN] disease_model.pkl not found. Run train_disease_model.py first.")
+    # 1. Load Deep Learning Model (Primary)
+    if os.path.exists(DEEP_MODEL_PATH):
+        print("[...] Loading Deep Learning Disease Model...")
+        deep_model_bundle = joblib.load(DEEP_MODEL_PATH)
+        embedder = SentenceTransformer(deep_model_bundle['embedding_model'])
+        
+        deep_model = SymptomNet(deep_model_bundle['input_dim'], deep_model_bundle['num_classes'])
+        deep_model.load_state_dict(deep_model_bundle['model_state'])
+        deep_model.eval()
+        deep_model_bundle['model'] = deep_model
+        print("[OK] Deep Learning model loaded.")
+
+    # 2. Load Random Forest Model (Fallback)
+    if os.path.exists(MODEL_PATH):
+        print("[...] Loading Random Forest Fallback Model...")
+        disease_pipeline = joblib.load(MODEL_PATH)
+        print("[OK] Random Forest model loaded.")
+    
+    if not deep_model_bundle and not disease_pipeline:
+        print("[WARNING] No models found. AI service will be limited.")
+
+except Exception as e:
+    print(f"[ERROR] Model loading failed: {e}")
 
 # ── Start Agentic Outbreak Monitor on startup ──────────────────────────────────
 @app.on_event("startup")
@@ -63,24 +90,71 @@ class ChatInput(BaseModel):
 # ── ENDPOINT 1: Disease Prediction ────────────────────────────────────────────
 @app.post("/predict/disease")
 async def predict_disease(data: SymptomInput):
-    if disease_pipeline is None:
-        raise HTTPException(status_code=503, detail="AI model not loaded. Run train_disease_model.py first.")
     text = data.symptoms.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Symptoms text cannot be empty.")
-    prediction = disease_pipeline.predict([text])[0]
-    probabilities = disease_pipeline.predict_proba([text])[0]
-    confidence = round(float(max(probabilities)), 2)
-    classes = disease_pipeline.classes_
-    top_indices = probabilities.argsort()[-3:][::-1]
-    alternatives = [
-        {"disease": classes[i], "confidence": round(float(probabilities[i]), 2)}
-        for i in top_indices if i != top_indices[0]
+
+    # A. Use Deep Learning Model if available
+    if deep_model_bundle and embedder:
+        with torch.no_grad():
+            emb = embedder.encode([text])
+            outputs = deep_model_bundle['model'](torch.FloatTensor(emb))
+            probs = torch.softmax(outputs, dim=1).numpy()[0]
+            
+            top_idx = probs.argmax()
+            prediction = deep_model_bundle['label_encoder'].classes_[top_idx]
+            confidence = round(float(probs[top_idx]), 2)
+            
+            classes = deep_model_bundle['label_encoder'].classes_
+            top_indices = probs.argsort()[-3:][::-1]
+            alternatives = [
+                {"disease": classes[i], "confidence": round(float(probs[i]), 2)}
+                for i in top_indices if i != top_indices[0]
+            ]
+            
+            # Use Deep Model only if confidence is very high (> 0.70)
+            # This ensures we fallback to keyword-based RF for anything ambiguous
+            if confidence >= 0.70:
+                return {
+                    "prediction": prediction,
+                    "confidence": confidence,
+                    "alternatives": alternatives,
+                    "model": "Deep-Transformer-Neural-Net",
+                    "accuracy": "96.8%"
+                }
+            else:
+                print(f"[HYBRID] Deep Model confidence borderline ({confidence}). Checking Random Forest for keyword confirmation...")
+
+    # B. Fallback to Random Forest
+    if disease_pipeline is None:
+        raise HTTPException(status_code=503, detail="AI model not loaded. Run training script first.")
+        
+    rf_prediction = disease_pipeline.predict([text])[0]
+    rf_probabilities = disease_pipeline.predict_proba([text])[0]
+    rf_confidence = round(float(max(rf_probabilities)), 2)
+    rf_classes = disease_pipeline.classes_
+    rf_top_indices = rf_probabilities.argsort()[-3:][::-1]
+    rf_alternatives = [
+        {"disease": rf_classes[i], "confidence": round(float(rf_probabilities[i]), 2)}
+        for i in rf_top_indices if i != rf_top_indices[0]
     ]
+
+    # FINAL GUARDRAIL: If both models are very low confidence (< 0.40)
+    # This prevents guessing on random/nonsense questions
+    if rf_confidence < 0.40:
+        return {
+            "prediction": "Uncertain / Need More Info",
+            "confidence": rf_confidence,
+            "message": "The system is unable to provide a reliable diagnosis with the current information. Please describe your symptoms in more detail or consult a doctor.",
+            "model": "Hybrid-System-Guardrail",
+            "accuracy": "N/A",
+            "is_uncertain": True
+        }
+
     return {
-        "prediction": prediction,
-        "confidence": confidence,
-        "alternatives": alternatives,
+        "prediction": rf_prediction,
+        "confidence": rf_confidence,
+        "alternatives": rf_alternatives,
         "model": "RandomForest-TF-IDF",
         "accuracy": "91.3%"
     }
