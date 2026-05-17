@@ -141,6 +141,45 @@ function HealthAssistant() {
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setLoading(true);
+
+    // ── Local Offline Match Fallback ──────────────────────────────────
+    if (!isOnline) {
+      setTimeout(() => {
+        const cleanMsg = userMsg.toLowerCase();
+        let matchedTip = null;
+        if (cleanMsg.includes('pain') || cleanMsg.includes('dard') || cleanMsg.includes('cramp') || cleanMsg.includes('peth') || cleanMsg.includes('pet')) {
+          matchedTip = OFFLINE_TIPS[1];
+        } else if (cleanMsg.includes('heavy') || cleanMsg.includes('bleed') || cleanMsg.includes('khoon') || cleanMsg.includes('bahaw')) {
+          matchedTip = OFFLINE_TIPS[0];
+        } else if (cleanMsg.includes('often') || cleanMsg.includes('change') || cleanMsg.includes('pad') || cleanMsg.includes('hours') || cleanMsg.includes('ghante')) {
+          matchedTip = OFFLINE_TIPS[2];
+        } else if (cleanMsg.includes('food') || cleanMsg.includes('iron') || cleanMsg.includes('eat') || cleanMsg.includes('khana') || cleanMsg.includes('diet') || cleanMsg.includes('palak') || cleanMsg.includes('gud')) {
+          matchedTip = OFFLINE_TIPS[3];
+        }
+
+        if (matchedTip) {
+          setMessages(prev => [...prev, {
+            role:    'ai',
+            text:    `[Offline Mode] ${matchedTip.a}`,
+            sources: [matchedTip.src],
+            urgency: matchedTip.urgency,
+          }]);
+          if (matchedTip.urgency === 'P1' || matchedTip.urgency === 'P2') {
+            speakResponse(matchedTip.a);
+          }
+        } else {
+          setMessages(prev => [...prev, {
+            role:    'ai',
+            text:    "Namaste! Main Sakhi hoon. Abhi aapka internet offline hai, isliye main is sawal ka poora jawab nahi de pa rahi hoon. Kripya upar diye gaye verified tips ko dekhein ya apni ASHA worker se sampark karein.",
+            sources: ["Sakhi Local Memory (Offline)"],
+            urgency: "P4",
+          }]);
+        }
+        setLoading(false);
+      }, 600);
+      return;
+    }
+
     try {
       // ── Call the grounded RAG endpoint ──────────────────────────────────
       const res = await api.post('/health-assistant', { message: userMsg });
@@ -161,11 +200,34 @@ function HealthAssistant() {
         window.location.href = '/login';
         return;
       }
-      setMessages(prev => [...prev, {
-        role: 'ai',
-        text: t.menstrual?.sakhi_error || 'I could not process your question right now. Please try again, or contact your ASHA worker for immediate help.',
-        isError: true,
-      }]);
+      
+      // Try local fallback on network error/timeout
+      const cleanMsg = userMsg.toLowerCase();
+      let matchedTip = null;
+      if (cleanMsg.includes('pain') || cleanMsg.includes('dard') || cleanMsg.includes('cramp') || cleanMsg.includes('peth') || cleanMsg.includes('pet')) {
+        matchedTip = OFFLINE_TIPS[1];
+      } else if (cleanMsg.includes('heavy') || cleanMsg.includes('bleed') || cleanMsg.includes('khoon') || cleanMsg.includes('bahaw')) {
+        matchedTip = OFFLINE_TIPS[0];
+      } else if (cleanMsg.includes('often') || cleanMsg.includes('change') || cleanMsg.includes('pad') || cleanMsg.includes('hours') || cleanMsg.includes('ghante')) {
+        matchedTip = OFFLINE_TIPS[2];
+      } else if (cleanMsg.includes('food') || cleanMsg.includes('iron') || cleanMsg.includes('eat') || cleanMsg.includes('khana') || cleanMsg.includes('diet') || cleanMsg.includes('palak') || cleanMsg.includes('gud')) {
+        matchedTip = OFFLINE_TIPS[3];
+      }
+
+      if (matchedTip) {
+        setMessages(prev => [...prev, {
+          role:    'ai',
+          text:    `[Connection Slow - Local Fallback] ${matchedTip.a}`,
+          sources: [matchedTip.src],
+          urgency: matchedTip.urgency,
+        }]);
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'ai',
+          text: t.menstrual?.sakhi_error || 'I could not process your question right now. Please try again, or contact your ASHA worker for immediate help.',
+          isError: true,
+        }]);
+      }
     } finally {
       setLoading(false);
     }
@@ -375,14 +437,13 @@ function HealthAssistant() {
           value={input} 
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
-          placeholder={isOnline ? 'Ask me anything about your health...' : 'No internet — see verified tips above ↑'}
-          disabled={!isOnline}
-          className="flex-1 bg-transparent outline-none text-sm font-medium text-slate-700 placeholder:text-slate-300 disabled:opacity-50 h-11" 
+          placeholder={isOnline ? 'Ask me anything about your health...' : 'Ask Sakhi (Offline local memory active)...'}
+          className="flex-1 bg-transparent outline-none text-sm font-medium text-slate-700 placeholder:text-slate-300 h-11" 
         />
         <button 
           type="button"
           onClick={() => handleSend()} 
-          disabled={loading || !input.trim() || !isOnline}
+          disabled={loading || !input.trim()}
           className="p-3 bg-slate-900 text-white rounded-xl hover:bg-rose-600 transition-all disabled:opacity-30 active:scale-95 shadow-sm"
         >
           <Send className="w-4 h-4" />

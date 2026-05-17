@@ -615,40 +615,97 @@ if (cluster.isPrimary) {
     if (!groqKey || groqKey === 'your_groq_api_key_here') {
       return res.send({
         reply: "Hello! I'm Sakhi. My advanced AI brain is currently being updated to better serve you. For now, please refer to the verified health tips above or contact your local ASHA worker for any health concerns. I'll be back fully soon!",
-        grounded: false
+        grounded: false,
+        sources: ["Sakhi Health Assistant — General Information"],
+        urgency: "P4"
       });
     }
 
     // Try RAG-powered endpoint first (grounded in WHO/ASHA guidelines)
     try {
       const ragRes = await axios.post(`${AI_URL}/ai/rag-chat`, { message }, { timeout: 12000 });
-      return res.send({ reply: ragRes.data.reply, grounded: true });
+      return res.send({
+        reply: ragRes.data.reply,
+        sources: ragRes.data.sources || [],
+        urgency: ragRes.data.urgency || 'P4',
+        grounded: true
+      });
     } catch (ragErr) {
-      console.warn('[Sakhi] RAG service unavailable, falling back to direct Groq:', ragErr.message);
+      console.warn('[Sakhi] RAG service unavailable, falling back to direct Groq with hard guardrails:', ragErr.message);
     }
 
-    // Fallback: direct Groq call
+    // Node.js Level Guardrails (Direct Fallback)
+    const queryClean = message.trim().toLowerCase().replace(/[?!.,]/g, '');
+    
+    // Quick Greetings or Identity/Help inquiries
+    const GREETINGS = ["hi", "hello", "namaste", "helo", "hey", "hola", "kaise ho", "good morning", "good evening", "namaskar", "pranam", "kya ho", "kaun ho", "who are you", "what is this", "intro", "sakhi"];
+    const isGreeting = GREETINGS.some(g => queryClean === g || queryClean.startsWith(g + " ")) && message.split(/\s+/).length <= 4;
+
+    const HEALTH_KEYWORDS = [
+      // Menstrual / Periods / Intimate health
+      "period", "menses", "mahvari", "mahavari", "maahvaari", "pad", "pads", "sanitary", "hygiene", "bleed", "bleeding", 
+      "mowho", "mahavari", "chhati", "pain", "dard", "discharge", "cycle", "white discharge", "periods", "pelvic",
+      // Pregnancy & Maternal
+      "pregnant", "pregnancy", "garbh", "garbhavastha", "delivery", "birth", "bacha", "bachhe", "bacche", "child", 
+      "nutrition", "breastfeed", "dudh", "doodh", "feed", "mother", "anc", "pcos", "weight", "acne",
+      // Symptoms & Clinical Terms
+      "fever", "bukhar", "vomit", "vomiting", "ultee", "diarrhea", "loose stool", "dast", "dehydration", "snake", 
+      "snakebite", "saanp", "heat", "heatstroke", "loo", "ambulance", "hospital", "phc", "doctor", "illness", 
+      "disease", "samasya", "bimar", "bimari", "vaccine", "dawa", "medicine", "cough", "tb", "tuberculosis", 
+      "malaria", "dengue", "typhoid", "hypertension", "bp", "pressure", "heart", "ors", "zinc"
+    ];
+    const hasHealthKeyword = HEALTH_KEYWORDS.some(k => queryClean.includes(k));
+
+    // Hard out-of-scope block: completely unrelated queries (e.g. sports, entertainment, abuse)
+    if (!isGreeting && !hasHealthKeyword) {
+      return res.send({
+        reply: "Namaste! Main Sakhi hoon, aapki women's health assistant. Main keval mahila aur parivaar ke swasthya, pregnancy, aur periods se jude sawalon ke jawab de sakti hoon. Kripya swasthya se juda sawal poochein.",
+        sources: ["Sakhi Health Assistant — General Information"],
+        urgency: "P4",
+        grounded: false
+      });
+    }
+
+    // Fallback: direct Groq call (Hardened System Prompt)
     try {
+      let systemPrompt = "";
+      if (isGreeting) {
+        systemPrompt = `You are Sakhi, a warm, polite, and trusted female Women's & Family Health Assistant for rural India.
+The user is saying hello. Respond with a warm, culturally polite greeting in the exact SAME language or Hinglish style they used.
+Introduce yourself as Sakhi, and invite them to ask you any questions about pregnancy care, menstrual hygiene, periods, maternal health, or child nutrition.
+Keep your response extremely brief (2 sentences max). Do NOT mention any medical rules or diseases in this greeting.
+FEMALE PERSONA RULE: You are female. Use feminine verb endings in Hindi/Hinglish (e.g. use "sakti hoon", "karungi", "bolungi" — NEVER use masculine "karunga", "saku", "bolunga", "jaunga").`;
+      } else {
+        systemPrompt = `You are Sakhi, a warm, polite, and highly trusted female Women's & Family Health Assistant for rural India.
+Provide safe, accurate, empathetic guidance on menstrual health, pregnancy care, nutrition, hygiene, and when to see a doctor.
+FEMALE PERSONA RULE: You are female. You MUST use feminine grammar and verb endings in Hindi/Hinglish (e.g. use "sakti hoon", "karungi", "bolungi" — NEVER use masculine "karunga", "saku", "bolunga", "jaunga").
+CRITICAL CLINICAL & TRANSLATION SAFEGUARDS:
+1. Menstruation/Periods/Mowho: Explain it strictly as a normal monthly biological process where the uterus lining (garbhashay ki lining) sheds, causing blood flow (khoon ka bahaw).
+2. ABSOLUTE BAN ON HAIR TRANSLATION: Never under any circumstances translate period bleeding or flow as hair ("baal" or "balon" or "balon ka nikaas"). Doing so is medically incorrect and unsafe.
+3. ABSOLUTE BAN ON MYTHS: Do NOT mention any non-scientific cultural taboos, bad blood, toxins, impurities, bad spirits, or curses.
+4. Keep responses strictly concise: 2-3 sentences maximum. Never diagnose or prescribe medicines — always recommend consulting a doctor or local ASHA worker.`;
+      }
+
       const groqRes = await axios.post(
         'https://api.groq.com/openai/v1/chat/completions',
         {
-          model: 'llama-3.1-8b-instant',
+          model: 'llama-3.3-70b-versatile',
           messages: [
-            {
-              role: 'system',
-              content: `You are Sakhi, a trusted Women's Health Assistant for rural India. 
-Provide safe, accurate, empathetic guidance on menstrual health, hygiene, nutrition, and when to see a doctor.
-Rules: respond in user's language; never diagnose; be warm and concise (3-5 sentences); for severe symptoms urgently advise hospital.`
-            },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: message }
           ],
-          temperature: 0.5,
+          temperature: 0.35,
           max_tokens: 300
         },
         { headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' } }
       );
       const reply = groqRes.data.choices?.[0]?.message?.content || 'I could not process your question. Please try again.';
-      res.send({ reply, grounded: false });
+      res.send({
+        reply,
+        sources: ["Sakhi Health Assistant — General Information"],
+        urgency: "P4",
+        grounded: false
+      });
     } catch (err) {
       console.error('Groq API error:', err.response?.data || err.message);
       res.status(503).send({ error: 'Health Assistant is temporarily unavailable. Please try again.' });

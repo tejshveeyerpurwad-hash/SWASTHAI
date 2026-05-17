@@ -380,7 +380,7 @@ CRITICAL MEDICAL & TRANSLATION SAFEGUARDS (MUST BE FOLLOWED 100%):
     client = Groq(api_key=groq_api_key)
     try:
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content": user_message},
