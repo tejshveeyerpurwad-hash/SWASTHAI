@@ -42,7 +42,7 @@ Most health apps call a third-party AI API and display the result. SwasthAI **ow
 
 ---
 
-## 🏆 Strategic Competitive Advantage (IEEE/Hackathon Focus)
+## 🏆 Strategic Competitive Advantage 
 
 *SwasthAI Guardian was built to win. We didn't just build a dashboard; we built a fault-tolerant medical infrastructure.*
 
