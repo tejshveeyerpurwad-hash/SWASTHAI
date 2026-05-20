@@ -75,19 +75,35 @@ export default function VoiceAssistant({ onResult }) {
     utterance.rate = 0.85; // Slightly slower for clarity
     utterance.pitch = 1.1; // Slightly higher pitch for female voice simulation
 
-    // Dynamically select a premium female voice (Google Hindi Female, Swara, Zira, Heera, etc.)
+    // Dynamically select a premium female voice (Microsoft Neerja, Google Hindi Female, Swara, Heera, etc.)
     const voices = window.speechSynthesis.getVoices();
     const l = speechLang.toLowerCase().split('-')[0];
-    let femaleVoice = voices.find(v => 
-      v.lang.toLowerCase().replace('_', '-').startsWith(l) && 
-      (v.name.toLowerCase().includes('female') || 
-       v.name.toLowerCase().includes('swara') || 
-       v.name.toLowerCase().includes('heera') || 
-       v.name.toLowerCase().includes('zira') || 
-       v.name.toLowerCase().includes('kalpana') || 
-       v.name.toLowerCase().includes('google') ||
-       v.name.toLowerCase().includes('microsoft') && !v.name.toLowerCase().includes('david') && !v.name.toLowerCase().includes('ravi') && !v.name.toLowerCase().includes('karan'))
-    );
+    
+    // 1. Search specifically for "neerja" first for Hindi
+    let femaleVoice = null;
+    if (l === 'hi') {
+      femaleVoice = voices.find(v => 
+        v.lang.toLowerCase().replace('_', '-').startsWith('hi') && 
+        v.name.toLowerCase().includes('neerja')
+      );
+    }
+    
+    // 2. If not found, look for general premium female Hindi/regional voices
+    if (!femaleVoice) {
+      femaleVoice = voices.find(v => 
+        v.lang.toLowerCase().replace('_', '-').startsWith(l) && 
+        (v.name.toLowerCase().includes('female') || 
+         v.name.toLowerCase().includes('swara') || 
+         v.name.toLowerCase().includes('heera') || 
+         v.name.toLowerCase().includes('kalpana') || 
+         v.name.toLowerCase().includes('google') ||
+         (v.name.toLowerCase().includes('microsoft') && 
+          !v.name.toLowerCase().includes('david') && 
+          !v.name.toLowerCase().includes('ravi') && 
+          !v.name.toLowerCase().includes('karan') && 
+          !v.name.toLowerCase().includes('hemant'))) // Exclude male Hemant voice
+      );
+    }
 
     if (!femaleVoice) {
       femaleVoice = voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith(l));
