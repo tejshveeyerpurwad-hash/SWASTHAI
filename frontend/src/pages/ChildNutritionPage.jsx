@@ -13,6 +13,38 @@ const STATUS_CONFIG = {
 };
 const getStatus = (s) => STATUS_CONFIG[s] || STATUS_CONFIG['Normal'];
 
+const getOfflineChildRecords = () => {
+  try {
+    const q = localStorage.getItem('offline_child_records');
+    return q ? JSON.parse(q) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const syncOfflineChildRecords = async () => {
+  const offlineRecords = getOfflineChildRecords();
+  if (offlineRecords.length === 0) return;
+
+  const remaining = [];
+  for (const record of offlineRecords) {
+    try {
+      await api.post('/ngo/malnutrition', {
+        name: record.childName,
+        age: Number(record.ageMonths),
+        weight: Number(record.weight),
+        height: Number(record.height)
+      });
+    } catch (err) {
+      console.error('Failed to sync child malnutrition record:', record, err);
+      if (err.response?.status !== 400) {
+        remaining.push(record);
+      }
+    }
+  }
+  localStorage.setItem('offline_child_records', JSON.stringify(remaining));
+};
+
 function NutritionForm({ onSave, onClose }) {
   const [form, setForm] = useState({ childName: '', ageMonths: '', weight: '', height: '' });
   const [loading, setLoading] = useState(false);
@@ -22,16 +54,61 @@ function NutritionForm({ onSave, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true); setError('');
+    const payload = {
+      name: form.childName,
+      age: Number(form.ageMonths),
+      weight: Number(form.weight),
+      height: Number(form.height),
+    };
     try {
-      const res = await api.post('/ngo/malnutrition', {
-        name: form.childName,
-        age: Number(form.ageMonths),
-        weight: Number(form.weight),
-        height: Number(form.height),
-      });
+      const res = await api.post('/ngo/malnutrition', payload);
       onSave({ ...form, status: res.data.status, bmi: res.data.bmi, action: res.data.action });
     } catch (err) {
-      setError(err.response?.data?.error || 'Malnutrition AI is currently unavailable. Please check back later.');
+      if (err.response?.status === 400) {
+        setError(err.response?.data?.error || 'Validation error');
+        setLoading(false);
+        return;
+      }
+
+      // Compute local growth status using the offline fallback heuristic
+      const w = Number(form.weight);
+      const h = Number(form.height);
+      const bmiVal = Number((w / ((h / 100) * (h / 100))).toFixed(2));
+
+      let localStatus = 'Normal';
+      let localAction = 'Healthy growth. Continue optimal feeding practices.';
+
+      if (bmiVal < 12) {
+        localStatus = 'Severe Acute Malnutrition';
+        localAction = 'Urgent: Immediate referral to Nutrition Rehabilitation Centre (NRC).';
+      } else if (bmiVal >= 12 && bmiVal < 13.5) {
+        localStatus = 'Moderate Acute Malnutrition';
+        localAction = 'Refer to Supplementary Nutrition Programme (ASHA follow-up).';
+      } else if (bmiVal >= 13.5 && bmiVal < 15) {
+        localStatus = 'Mild Underweight';
+        localAction = 'Provide energy-dense nutrition advice. Follow up in 14 days.';
+      }
+
+      const offlineRecord = {
+        id: `offline-${Date.now()}`,
+        childName: form.childName,
+        ageMonths: Number(form.ageMonths),
+        weight: w,
+        height: h,
+        status: localStatus,
+        bmi: bmiVal,
+        action: localAction,
+        isOffline: true
+      };
+
+      try {
+        const current = getOfflineChildRecords();
+        localStorage.setItem('offline_child_records', JSON.stringify([offlineRecord, ...current]));
+      } catch (storageErr) {
+        console.error('Storage full or error:', storageErr);
+      }
+
+      onSave(offlineRecord);
     } finally { setLoading(false); }
   };
 
@@ -96,15 +173,47 @@ export default function ChildNutritionPage() {
   const [filter, setFilter] = useState('All');
 
   const fetchRecords = async () => {
-    try { setError(''); const res = await api.get('/ngo/malnutrition'); setRecords(res.data); }
-    catch (err) { setError(err.response?.data?.error || 'Failed to load records.'); }
-    finally { setLoading(false); }
+    try { 
+      setError(''); 
+      // Silently try to sync offline records in background first
+      await syncOfflineChildRecords();
+
+      const res = await api.get('/ngo/malnutrition'); 
+      const serverRecords = res.data;
+      localStorage.setItem('cached_child_records', JSON.stringify(serverRecords));
+
+      const offlineRecords = getOfflineChildRecords();
+      setRecords([...offlineRecords, ...serverRecords]);
+    } catch (err) { 
+      // Load from cached server records + merge with offline pending queue
+      const cached = localStorage.getItem('cached_child_records');
+      const serverRecords = cached ? JSON.parse(cached) : [];
+      const offlineRecords = getOfflineChildRecords();
+      setRecords([...offlineRecords, ...serverRecords]);
+
+      if (!cached && offlineRecords.length === 0) {
+        setError(err.response?.data?.error || 'Failed to load records. Working offline.'); 
+      }
+    } finally { setLoading(false); }
   };
-  useEffect(() => { fetchRecords(); }, []);
+
+  useEffect(() => { 
+    fetchRecords(); 
+
+    const handleOnline = () => {
+      console.log('Browser back online. Synchronizing child records...');
+      fetchRecords();
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
 
   const handleSave = (r) => { 
     // childName is what we track in state from the form, DB column is also childName
-    setRecords(prev => [{ childName: r.childName, ageMonths: r.ageMonths, weight: r.weight, height: r.height, status: r.status, bmi: r.bmi, action: r.action, id: Date.now() }, ...prev]); 
+    setRecords(prev => [{ childName: r.childName, ageMonths: r.ageMonths, weight: r.weight, height: r.height, status: r.status, bmi: r.bmi, action: r.action, id: r.id || Date.now(), isOffline: r.isOffline }, ...prev]); 
     setShowForm(false); 
   };
   const filtered = filter === 'All' ? records : records.filter(r => r.status === filter);
@@ -206,7 +315,14 @@ export default function ChildNutritionPage() {
                           {(r.childName || r.name || 'C')[0].toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-black text-slate-900 text-sm uppercase tracking-tight">{r.childName || r.name || 'Unknown'}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-black text-slate-900 text-sm uppercase tracking-tight">{r.childName || r.name || 'Unknown'}</p>
+                            {r.isOffline && (
+                              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-md text-[7px] font-bold uppercase tracking-wider animate-pulse flex items-center gap-0.5 shrink-0">
+                                <RefreshCw className="w-2 h-2 animate-spin shrink-0" /> Sync Pending
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10px] text-slate-400 font-bold">{r.ageMonths || r.ageMonths === 0 ? `${r.ageMonths} months` : 'Age N/A'}</p>
                         </div>
                       </div>

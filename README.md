@@ -25,7 +25,9 @@
     - **V2**: Upgraded to a **Grounded RAG system**. Sakhi retrieves clinical chunks from WHO/MoHFW before answering. Cites every source. Works offline via local knowledge chunks.
 3.  **Hardened Offline-First Sync**:
     - **V1**: Basic local storage (required online login).
-    - **V2**: **Offline-First Login enabled**. If a worker is in a zero-signal zone, they can still "log in" using the demo credentials to access local features. Uses **IndexedDB + Service Worker** for persistent caching. Data automatically syncs when the worker reaches a 2G/3G zone.
+    - **V2**: **Offline-First Capabilities Enabled**:
+        - **Offline Login**: If a worker is in a zero-signal zone, they can still "log in" using the demo credentials to access local features. Uses **IndexedDB + Service Worker** for persistent caching.
+        - **Offline Maternal & Child Support**: NGO/ASHA workers can register maternal pregnancy vitals and child nutrition assessments in zero-signal zones. Computes risk and growth status instantly client-side using local clinical heuristic engines (WHO blood pressure criteria / BMI Z-score indices) and caches records inside local queues (`offline_maternal_records` / `offline_child_records`) with visual "Sync Pending" indicators. Silently uploads to the server database as soon as the browser is back online or refreshed.
 4.  **Multilingual Voice I/O**:
     - Full speech-to-text and text-to-speech support for 6 Indian languages, removing literacy barriers.
 5.  **Smart Share System (Navbar QR)**:

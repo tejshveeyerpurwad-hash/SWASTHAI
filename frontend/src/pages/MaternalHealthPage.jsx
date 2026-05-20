@@ -38,6 +38,40 @@ function VitalSlider({ label, unit, min, max, value, onChange, dangerAbove, warn
   );
 }
 
+const getOfflineMaternalRecords = () => {
+  try {
+    const q = localStorage.getItem('offline_maternal_records');
+    return q ? JSON.parse(q) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const syncOfflineMaternalRecords = async () => {
+  const offlineRecords = getOfflineMaternalRecords();
+  if (offlineRecords.length === 0) return;
+
+  const remaining = [];
+  for (const record of offlineRecords) {
+    try {
+      const payload = {
+        name: record.name,
+        age: Number(record.age),
+        trimester: Number(record.trimester),
+        dueDate: record.dueDate,
+        vitals: record.vitals
+      };
+      await api.post('/ngo/maternal', payload);
+    } catch (err) {
+      console.error('Failed to sync maternal record:', record, err);
+      if (err.response?.status !== 400) {
+        remaining.push(record);
+      }
+    }
+  }
+  localStorage.setItem('offline_maternal_records', JSON.stringify(remaining));
+};
+
 function MaternalForm({ onSave, onClose }) {
   const [form, setForm] = useState({ name: '', age: '', trimester: 1, dueDate: '' });
   const [vitals, setVitals] = useState({ systolic_bp: 115, diastolic_bp: 75, bs: 5.0, heart_rate: 78 });
@@ -49,17 +83,17 @@ function MaternalForm({ onSave, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true); setError('');
+    const payload = {
+      ...form,
+      vitals: {
+        systolic_bp:  vitals.systolic_bp,
+        diastolic_bp: vitals.diastolic_bp,
+        bs:           vitals.bs,
+        body_temp:    98.6,        // standard assumption — not collected (minor field)
+        heart_rate:   vitals.heart_rate,
+      }
+    };
     try {
-      const payload = {
-        ...form,
-        vitals: {
-          systolic_bp:  vitals.systolic_bp,
-          diastolic_bp: vitals.diastolic_bp,
-          bs:           vitals.bs,
-          body_temp:    98.6,        // standard assumption — not collected (minor field)
-          heart_rate:   vitals.heart_rate,
-        }
-      };
       const res = await api.post('/ngo/maternal', payload);
       onSave({ ...form, riskLevel: res.data.riskLevel, vitals });
     } catch (err) {
@@ -69,7 +103,46 @@ function MaternalForm({ onSave, onClose }) {
         window.location.href = '/login';
         return;
       }
-      setError(err.response?.data?.error || 'Maternal Risk AI is currently unavailable. Please consult a doctor immediately.');
+      
+      if (err.response?.status === 400) {
+        setError(err.response?.data?.error || 'Validation error');
+        setLoading(false);
+        return;
+      }
+
+      // Offline risk heuristic calculation
+      let localRisk = 'Low Risk';
+      if (vitals.systolic_bp >= 160 || vitals.diastolic_bp >= 110) {
+        localRisk = 'High Risk';
+      } else if (vitals.systolic_bp >= 140 || vitals.diastolic_bp >= 90 || vitals.bs > 8.4 || vitals.heart_rate > 110) {
+        localRisk = 'Medium Risk';
+      }
+
+      const offlineRecord = {
+        id: `offline-${Date.now()}`,
+        name: form.name,
+        age: Number(form.age),
+        trimester: Number(form.trimester),
+        dueDate: form.dueDate,
+        vitals: {
+          systolic_bp:  vitals.systolic_bp,
+          diastolic_bp: vitals.diastolic_bp,
+          bs:           vitals.bs,
+          body_temp:    98.6,
+          heart_rate:   vitals.heart_rate,
+        },
+        riskLevel: localRisk,
+        isOffline: true
+      };
+
+      try {
+        const current = getOfflineMaternalRecords();
+        localStorage.setItem('offline_maternal_records', JSON.stringify([offlineRecord, ...current]));
+      } catch (storageErr) {
+        console.error('Storage full or error:', storageErr);
+      }
+
+      onSave(offlineRecord);
     } finally { setLoading(false); }
   };
 
@@ -188,8 +261,15 @@ export default function MaternalHealthPage() {
   const fetchRecords = async () => {
     try { 
       setError(''); 
+      // Silently try to sync offline records in background first
+      await syncOfflineMaternalRecords();
+
       const res = await api.get('/ngo/maternal'); 
-      setRecords(res.data); 
+      const serverRecords = res.data;
+      localStorage.setItem('cached_maternal_records', JSON.stringify(serverRecords));
+
+      const offlineRecords = getOfflineMaternalRecords();
+      setRecords([...offlineRecords, ...serverRecords]);
     } catch (err) { 
       if (err.response?.status === 401) {
         alert('Your session has expired. Please log in again.');
@@ -197,12 +277,34 @@ export default function MaternalHealthPage() {
         window.location.href = '/login';
         return;
       }
-      setError(err.response?.data?.error || 'Failed to load records.'); 
+      
+      // Load from cached server records + merge with offline pending queue
+      const cached = localStorage.getItem('cached_maternal_records');
+      const serverRecords = cached ? JSON.parse(cached) : [];
+      const offlineRecords = getOfflineMaternalRecords();
+      setRecords([...offlineRecords, ...serverRecords]);
+
+      if (!cached && offlineRecords.length === 0) {
+        setError(err.response?.data?.error || 'Failed to load records. Working offline.'); 
+      }
     } finally { setLoading(false); }
   };
-  useEffect(() => { fetchRecords(); }, []);
 
-  const handleSave = (r) => { setRecords(prev => [{ ...r, id: Date.now() }, ...prev]); setShowForm(false); };
+  useEffect(() => { 
+    fetchRecords(); 
+
+    const handleOnline = () => {
+      console.log('Browser back online. Synchronizing maternal records...');
+      fetchRecords();
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
+
+  const handleSave = (r) => { setRecords(prev => [{ ...r, id: r.id || Date.now() }, ...prev]); setShowForm(false); };
   const filtered = filter === 'All' ? records : records.filter(r => r.riskLevel === filter);
   const stats = { total: records.length, high: records.filter(r => r.riskLevel === 'High Risk').length, medium: records.filter(r => r.riskLevel === 'Medium Risk').length, low: records.filter(r => r.riskLevel === 'Low Risk').length };
 
@@ -295,7 +397,14 @@ export default function MaternalHealthPage() {
                           {(r.name || 'P')[0].toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-black text-slate-900 text-sm uppercase tracking-tight">{r.name || 'Unknown'}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-black text-slate-900 text-sm uppercase tracking-tight">{r.name || 'Unknown'}</p>
+                            {r.isOffline && (
+                              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-md text-[7px] font-bold uppercase tracking-wider animate-pulse flex items-center gap-0.5 shrink-0">
+                                <RefreshCw className="w-2 h-2 animate-spin shrink-0" /> Sync Pending
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10px] text-slate-400 font-bold">Age: {r.age} yrs</p>
                         </div>
                       </div>
