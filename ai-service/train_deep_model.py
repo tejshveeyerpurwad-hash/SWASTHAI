@@ -76,7 +76,7 @@ for epoch in range(EPOCHS):
 
 # 8. Save artifacts for deployment
 artifacts = {
-    'model_state': model.state_dict(),
+    'model_state': {k: v.cpu() for k, v in model.state_dict().items()},
     'label_encoder': label_encoder,
     'input_dim': input_dim,
     'num_classes': num_classes,

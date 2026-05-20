@@ -7,6 +7,99 @@ import torch
 from model_def import SymptomNet
 from sentence_transformers import SentenceTransformer
 from skin_analyzer import analyze_skin_image
+import re
+from collections import Counter
+
+# ── Clinical & Gibberish Safeguard Guardrails ──────────────────────────────────
+MEDICAL_KEYWORDS = {
+    # English symptoms & clinical terms
+    "fever", "cough", "pain", "headache", "weakness", "stomach", "appetite", "hunger", "nausea",
+    "vomit", "vomiting", "diarrhea", "fatigue", "spots", "skin", "temp", "temperature", "chills",
+    "shivering", "constipation", "spleen", "tenderness", "lethargy", "tongue", "bloat", "bloating",
+    "enteric", "rash", "discomfort", "stool", "ache", "upset", "cramps", "cramp", "sore", "throat",
+    "nose", "runny", "cold", "flu", "infection", "shivers", "shaking", "sweat", "sweating", "rigors",
+    "pallor", "jaundice", "anemia", "shiver", "periodic", "cycle", "cycles", "retro", "orbital",
+    "joints", "joint", "bone", "eyes", "eye", "platelet", "platelets", "gums", "bleeding", "bleed",
+    "blood", "sputum", "weight", "loss", "night", "sweats", "breath", "breathing", "breathlessness",
+    "difficulty", "hemoptysis", "lung", "lungs", "chest", "watery", "dehydration", "dehydrated",
+    "urine", "itching", "itch", "stool", "stools", "blisters", "blister", "varicella", "measles",
+    "morbilli", "heat", "stroke", "exposure", "dizziness", "dizzy", "collapse", "collapsed",
+    "exhaustion", "hyperthermia", "snake", "bite", "fang", "marks", "paralysis", "numbness",
+    "numb", "convulsion", "convulsions", "poison", "venom", "respiratory", "smell", "taste",
+    "sepsis", "infection", "inflamed", "lesion", "lesions", "wound", "injury", "burn", "swelling",
+    "dengue", "malaria", "typhoid", "tb", "tuberculosis", "cholera", "dysentery", "chickenpox",
+    "sick", "unwell", "ill", "hurt", "problem", "disease", "disorder", "condition",
+    
+    # Hindi Transliterated
+    "bukhar", "bukhaar", "dard", "kamzori", "pet", "bhook", "khujli", "chakti", "sujan", "khoon",
+    "sard", "sardi", "zukaam", "zukam", "jhatka", "sans", "saans", "chakkar", "dast", "ulti",
+    "ultiya", "thakaan", "haddi", "daane", "chchale", "khansi", "wajan", "paseena", "potty",
+    "peela", "peeli", "peshab", "chechak", "khasra", "behosh", "behoshi", "saanp", "kata",
+    "dhoop", "soojan", "gala", "takleef", "badan", "sharir", "shareer", "kam", "marode",
+    "gadbad", "kharab", "thanda", "kaanpna", "paseena", "aankhein", "aankhen", "chamdi",
+    "bimar", "bimari", "tabiyat", "takleef", "swasthya",
+    
+    # Devanagari Hindi
+    "बुखार", "दर्द", "कमजोरी", "पेट", "भूख", "खुजली", "सूजन", "खून", "सर्दी", "जुकाम",
+    "सांस", "चक्कर", "दस्त", "उल्टी", "थकान", "हड्डी", "दाने", "छाले", "खांसी", "वजन",
+    "पसीना", "पेशाब", "चेचक", "खसरा", "बेहोश", "सांप", "काटा", "धूप", "गला", "तकलीफ",
+    "बदन", "शरीर", "मरोड़", "खराब", "ठंडा", "कांपना", "आंखें", "चमड़ी", "बीमार", "बीमारी",
+    "तबीयत", "स्वास्थ्य",
+    
+    # Tamil
+    "kaichal", "thalaivaali", "vayiru", "vali", "thalarchi", "pasi", "nirungal", "viyarvai",
+    "irumal", "moochu", "balgam", "ratham", "palor", "siru", "neer", "peela", "thol", "sarumpu",
+    "kan", "sivappu", "mukku", "sali", "veekam", "vomi", "maayakam", "thakam", "thaakam",
+    "arisi", "thanni", "pola", "moonru", "valandhu", "uzhaippu", "thookam", "izhapu"
+}
+
+def is_gibberish(text: str) -> bool:
+    text_lower = text.lower()
+    
+    # 1. Repeating characters: 4 or more times (e.g. "aaaa", "zzzz")
+    if re.search(r'(.)\1{3,}', text_lower):
+        return True
+        
+    # 2. Sequential keyboard layouts and garbage sequences
+    gibberish_patterns = [
+        r'asdfgh', r'qwerty', r'zxcvbn', r'123456', r'qwert', r'asdfg', r'zxcvb',
+        r'jklsem', r'mnbvc', r'lkjhg', r'poiuy'
+    ]
+    for pattern in gibberish_patterns:
+        if pattern in text_lower:
+            return True
+            
+    # 3. English/ASCII words > 3 chars with no vowels
+    words = re.findall(r'\b[a-zA-Z]+\b', text_lower)
+    for w in words:
+        if len(w) > 3:
+            if not any(char in 'aeiouy' for char in w):
+                return True
+                
+    # 4. Spammed repeated words (e.g. "bhai bhai bhai bhai")
+    all_words = re.findall(r'\b\w+\b', text_lower)
+    if len(all_words) > 5:
+        c = Counter(all_words)
+        if c.most_common(1)[0][1] > 4:
+            return True
+            
+    return False
+
+def has_health_keywords(text: str) -> bool:
+    text_lower = text.lower()
+    
+    # Direct substring check for maximum vocabulary coverage
+    for kw in MEDICAL_KEYWORDS:
+        if kw in text_lower:
+            return True
+            
+    # Suffix clinical check (e.g. bronchitis, fibromyalgia, anemia, etc.)
+    medical_suffixes = ["itis", "pathy", "algia", "emia", "osis"]
+    for suffix in medical_suffixes:
+        if re.search(r'\b\w+' + suffix + r'\b', text_lower):
+            return True
+            
+    return False
 
 # RAG & Agentic imports
 from rag_service import rag_chat
@@ -61,11 +154,20 @@ try:
 except Exception as e:
     print(f"[ERROR] Model loading failed: {e}")
 
-# ── Start Agentic Outbreak Monitor on startup ──────────────────────────────────
+# ── Start Agentic Outbreak Monitor & Warmup RAG on startup ──────────────────────
 @app.on_event("startup")
 async def startup_event():
     start_agent_background()
     print("[OK] Agentic Outbreak Monitor started in background thread.")
+    
+    # Warm up RAG embeddings in a background thread so the first request doesn't timeout
+    try:
+        import threading
+        from rag_service import _get_kb_embeddings
+        threading.Thread(target=_get_kb_embeddings, daemon=True).start()
+        print("[OK] RAG multilingual embeddings warmup started in background thread.")
+    except Exception as e:
+        print(f"[ERROR] Failed to start RAG warmup thread: {e}")
 
 # ── Data Models ────────────────────────────────────────────────────────────────
 class SymptomInput(BaseModel):
@@ -93,6 +195,26 @@ async def predict_disease(data: SymptomInput):
     text = data.symptoms.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Symptoms text cannot be empty.")
+
+    # ── Text Safeguard Guardrails (Gibberish & Clinical Vocabulary Filter) ────
+    is_invalid_len = len(text) < 4
+    is_gib = is_gibberish(text)
+    is_off_topic = not has_health_keywords(text)
+    
+    if is_invalid_len or is_gib or is_off_topic:
+        guardrail_message = (
+            "Hello! I am SwasthAI Guardian. To help you properly, please describe actual physical health symptoms "
+            "(such as fever, cough, pain, headache, or skin rash). / नमस्ते! मैं स्वास्थ-एआई गार्जियन हूँ। "
+            "आपकी सही मदद करने के लिए, कृपया वास्तविक शारीरिक स्वास्थ्य लक्षणों (जैसे बुखार, खांसी, दर्द, सिरदर्द, या त्वचा पर रैश) का वर्णन करें।"
+        )
+        return {
+            "prediction": "Uncertain / Need More Info",
+            "confidence": 0.0,
+            "message": guardrail_message,
+            "model": "Hybrid-System-Guardrail",
+            "accuracy": "N/A",
+            "is_uncertain": True
+        }
 
     # A. Use Deep Learning Model if available
     if deep_model_bundle and embedder:

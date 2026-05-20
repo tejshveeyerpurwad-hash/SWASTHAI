@@ -29,6 +29,47 @@ def analyze_skin_image(image_bytes: bytes):
     # Combine mean intensity with standard deviation for robust edge density
     edge_density = (255 - edge_stat.mean[0]) + (edge_stat.stddev[0] * 0.4)
 
+    # ── CV Guardrail: Image Quality & Skin Tone Verification ──────────────────
+    sample_img = img.resize((16, 16))
+    pixels = list(sample_img.getdata())
+    
+    skin_pixels = 0
+    for r_px, g_px, b_px in pixels:
+        # Standard human skin tone color criteria in RGB space:
+        if r_px > 45 and g_px > 30 and b_px > 15:
+            if r_px > g_px and r_px > b_px:
+                if (r_px - g_px) > 10:
+                    skin_pixels += 1
+                    
+    skin_ratio = skin_pixels / len(pixels)
+
+    is_blank = std_dev < 10.0
+    is_blurry = edge_density < 18.0
+    is_non_skin = skin_ratio < 0.15 # Less than 15% skin pixels
+
+    if is_blank or is_blurry or is_non_skin:
+        error_msg = ""
+        if is_blank:
+            error_msg = "Image appears to be blank, too dark, or a single solid color. Please upload a clear photo of the skin lesion."
+        elif is_blurry:
+            error_msg = "Image is too blurry or out of focus. Please upload a sharp close-up photo of the affected area."
+        else:
+            error_msg = "No human skin pattern detected. Please make sure the photo contains the affected skin area under good lighting."
+            
+        return {
+            "prediction": "Invalid / Non-Skin Image",
+            "severity": "unknown",
+            "confidence": 0.0,
+            "is_invalid": True,
+            "error_message": error_msg + " / कृपया स्पष्ट, अच्छी रोशनी वाली त्वचा की तस्वीर अपलोड करें।",
+            "markers": {
+                "color_irregularity": round(std_dev, 2),
+                "edge_density": round(edge_density, 2),
+                "skin_pixel_percent": round(skin_ratio * 100, 1),
+                "clinical_score": "0/10"
+            }
+        }
+
     # ── 3. Erythema Index (clinical redness measure) ──────────────────────────
     r, g, b = img.split()
     r_mean = ImageStat.Stat(r).mean[0]
@@ -39,11 +80,11 @@ def analyze_skin_image(image_bytes: bytes):
     inflammation_ratio = r_mean / (avg_gb + 1)
 
     # ── 4. Saturation Spike (active inflammation marker) ─────────────────────
-    hsv = img.convert('HSV') if hasattr(Image, 'HSV') else None
-    if hsv:
+    try:
+        hsv = img.convert('HSV')
         _, s, _ = hsv.split()
         saturation = ImageStat.Stat(s).mean[0] / 255.0
-    else:
+    except Exception:
         # Fallback: estimate saturation from RGB
         saturation = (max(r_mean, g_mean, b_mean) - min(r_mean, g_mean, b_mean)) / (max(r_mean, g_mean, b_mean) + 1)
 

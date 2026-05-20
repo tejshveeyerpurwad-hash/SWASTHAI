@@ -475,11 +475,24 @@ if (cluster.isPrimary) {
   });
   app.post('/api/ngo/village', auth, checkRole(['ngo', 'admin']), async (req, res) => {
     const { villageId, name, population, pregnant, children, malnutrition, contact } = req.body;
-    await db.run(
-      'INSERT OR REPLACE INTO village_health (villageId, name, population, pregnant_women, children_under_5, malnutrition_cases, asha_contact) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [villageId, name, population, pregnant, children, malnutrition, contact]
-    );
-    res.send({ status: 'Updated Node Axis.' });
+    try {
+      await db.run(
+        `INSERT INTO village_health (villageId, name, population, pregnant_women, children_under_5, malnutrition_cases, asha_contact)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(villageId) DO UPDATE SET
+           name = excluded.name,
+           population = excluded.population,
+           pregnant_women = excluded.pregnant_women,
+           children_under_5 = excluded.children_under_5,
+           malnutrition_cases = excluded.malnutrition_cases,
+           asha_contact = excluded.asha_contact`,
+        [villageId, name, population, pregnant, children, malnutrition, contact]
+      );
+      res.send({ status: 'Updated Node Axis.' });
+    } catch (err) {
+      console.error(err);
+      res.status(500).send({ error: 'Failed to update village info.' });
+    }
   });
 
   app.post('/api/ngo/maternal', auth, checkRole(['ngo', 'admin']), async (req, res) => {
@@ -594,8 +607,8 @@ if (cluster.isPrimary) {
       const userRecord = await db.get('SELECT name FROM users WHERE id = ?', [req.user.id]);
       const userName = userRecord?.name || 'Unknown Villager';
 
-      await db.run('INSERT INTO ambulance_requests (name, location, priority, symptoms, status) VALUES (?, ?, ?, ?, ?)',
-        [userName, village, 'Pad Request', 'Requires Sanitary Pads delivered to village.', 'pending']
+      await db.run('INSERT INTO ambulance_requests (user_id, name, location, priority, symptoms, status) VALUES (?, ?, ?, ?, ?, ?)',
+        [req.user.id, userName, village, 'Pad Request', 'Requires Sanitary Pads delivered to village.', 'pending']
       );
       res.send({ success: true });
     } catch (err) {
