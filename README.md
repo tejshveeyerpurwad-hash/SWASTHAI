@@ -1,7 +1,7 @@
 # SwasthAI Guardian 🌿
 ### Integrated Rural Health Platform · AI-Powered · Offline-First · Built for Bharat
 
-### 🌐 [Live Production Build](https://swasthai-guardian.onrender.com)
+### 🌐 [Link to the live production build](https://swasthai-guardian.onrender.com)
 
 ---
 
