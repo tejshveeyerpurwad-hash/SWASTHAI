@@ -1,33 +1,9 @@
 # SwasthAI Guardian 🌿
 ### Integrated Rural Health Platform · AI-Powered · Offline-First · Built for Bharat
 
-### 🌐 [Link to the live production build](https://swasthai-guardian.onrender.com)
-
----
-
 > **SwasthAI Guardian** is a production-grade, multi-role healthcare platform designed for India's 600,000+ villages. It connects rural citizens, ASHA health workers, NGO field teams, and district hospital administrators through custom-trained machine learning, an offline-first architecture, full voice interaction, and native support for **6 Indian languages**.
 
 ---
-
-## 📽️ Important Note on Demo Video
-> [!IMPORTANT]
-> The attached demo video shows an **earlier iteration (V1)** of the platform. The current repository contains the **V2 Production Build** with significant architectural upgrades.
-
-### 🚀 Major Updates since V1 Demo
-
-| Feature / Upgrade | V1 Baseline | V2 Production Upgrade (Sprint Work) |
-| :--- | :--- | :--- |
-| **Hybrid Diagnostic Engine (DL + ML)** | Used a basic Random Forest (RF) model (~88% accuracy). | Integrated **SymptomNet** (Deep Learning model powered by multilingual Transformer embeddings: `paraphrase-multilingual-MiniLM-L12-v2`) with a **Random Forest fallback** for robust keyword-based verification. Accuracy is now **96%+**. It SEMANTICALLY understands Hindi/Marathi/Tamil symptoms instead of just keyword matching. |
-| **Sakhi RAG (Retrieval-Augmented Generation)** | Generic LLM chatbot (prone to hallucinations). | Upgraded to a **Grounded RAG system**. Sakhi retrieves clinical chunks from WHO/MoHFW before answering. Cites every source. Works offline via local knowledge chunks. |
-| **Hardened Offline-First Sync** | Basic local storage (required online login). | **Offline-First Capabilities Enabled**:<br><br>• **Offline Login**: If a worker is in a zero-signal zone, they can still "log in" using the demo credentials to access local features. Uses **IndexedDB + Service Worker** for persistent caching.<br><br>• **Offline Maternal & Child Support**: NGO/ASHA workers can register maternal pregnancy vitals and child nutrition assessments in zero-signal zones. Computes risk and growth status instantly client-side using local clinical heuristic engines (WHO blood pressure criteria / BMI Z-score indices) and caches records inside local queues (`offline_maternal_records` / `offline_child_records`) with visual "Sync Pending" indicators. Silently uploads to the server database as soon as the browser is back online or refreshed. |
-| **Multilingual Voice I/O** | English only, text-only interaction. | Full speech-to-text and text-to-speech support for 6 Indian languages, removing literacy barriers. |
-| **Smart Share System (Navbar QR)** | Standard web app distribution. | **V2 Update**: Integrated a high-visibility **Share Button** in the navbar. It generates a **Dynamic QR Code** and app link, allowing villagers and ASHA workers to distribute the PWA instantly without an app store, even in low-connectivity zones. |
-| **Agentic Outbreak Radar** | Manual outbreak reporting. | **V2 Update**: A background autonomous agent scans village clinical data every 30 minutes. It detects symptom clusters (e.g., 5+ cases of fever in one village) and triggers **instant notifications for both District Admins and local ASHA workers** to stop outbreaks before they become epidemics. |
-| **Edge Image Compression** | Standard high-resolution uploads. | **V2 Update**: Integrated browser-side image compression on skin photo uploads. Automatically reduces high-res images (5MB+) down to `< 200KB` on-the-fly before upload, ensuring reliable transmission over spotty 2G/3G connections. |
-| **API Resilience via Exponential Backoff** | Standard API requests without failover. | **V2 Update**: Wrapped the primary Groq LLM API client in a 3-attempt exponential backoff and retry loop (1s, 2s, 4s delays) to mitigate network jitter. Added an automatic failover to the local WHO/ASHA knowledge base to prevent silent clinical failures during API blackouts. |
-
----
-
 
 ## 🏆 Why SwasthAI is Different
 
@@ -35,7 +11,7 @@ Most health apps call a third-party AI API and display the result. SwasthAI **ow
 
 ---
 
-## 🏆 Strategic Competitive Advantage 
+## 🏆 Strategic Competitive Advantage (IEEE/Hackathon Focus)
 
 *SwasthAI Guardian was built to win. We didn't just build a dashboard; we built a fault-tolerant medical infrastructure.*
 
@@ -52,9 +28,8 @@ Most health apps call a third-party AI API and display the result. SwasthAI **ow
 | English only | 6 languages: English, Hindi, Marathi, Tamil, Telugu, Bengali |
 | Text-only interaction | Voice **in** (speech-to-text) + Voice **out** (text-to-speech) |
 | Generic LLM answers | Grounded RAG — every Sakhi answer cites WHO/ASHA/FOGSI |
-| Basic ML model | **Hybrid Neural Architecture** (Transformer Embeddings + DL + Random Forest Fallback) |
+| Basic ML model | **Hybrid Neural Architecture** (Transformer + Random Forest) |
 | Simple Thresholds | **Double-Uncertainty Guardrail** (Safety First) |
-| AI fails silently on vague symptoms | **V2: Clinical Heuristic Fallback** — zero-hallucination, always returns ASHA-grounded advice |
 | No privacy compliance | DISHA 2023 consent modal on first login |
 | Crashes when AI is down | KB-chunk fallback — system never fails silently |
 
@@ -62,52 +37,19 @@ Most health apps call a third-party AI API and display the result. SwasthAI **ow
 
 ## 🗺️ System Architecture
 
-SwasthAI Guardian is built on a **true 3-service Microservices Architecture**. Each service is independently deployable, fault-isolated, and communicates over HTTP JSON APIs:
-
-```text
-┌─────────────────────────┐     ┌─────────────────────────┐     ┌─────────────────────────┐
-│  React + Vite Frontend  │────▶│  Node.js + Express API  │────▶│ FastAPI AI Microservice │
-│  Port 5173 (PWA)        │     │  Port 5000              │     │ Port 8000               │
-│                         │     │                         │     │                         │
-│  ● Luminous Emerald UI  │     │  ● JWT Auth + bcryptjs  │     │  ● Hybrid Neural Engine │
-│  ● 6-language i18n      │     │  ● Rate Limiting        │     │  ● Transformer Embeddings│
-│  ● Edge AI Skin Scan    │     │  ● Cluster Load Balance │     │  ● RF Safety Fallback   │
-│  ● Voice In + Out       │     │  ● SQLite (offline)     │     │  ● Outbreak Agent       │
-│  ● PWA installable      │     │  ● CORS Whitelist       │     │  ● Safety Guardrails    │
-│  ● DISHA Consent Gate   │     │  ● AI Offline Fallback  │     │  ● Clinical Heuristic   │
-│                         │     │    (V2 — 6-lang rules)  │     │    Fallback (V2)        │
-│                         │     │                         │     │  ● Sakhi RAG (38 chks)  │
-└─────────────────────────┘     └─────────────────────────┘     └─────────────────────────┘
 ```
-
-```mermaid
-graph LR
-    subgraph Frontend ["🖥️ React + Vite Frontend (PWA)"]
-        A["● Luminous Emerald UI<br>● 6-Language i18n<br>● Edge AI Skin Scan<br>● Voice In & Out<br>● PWA Installable<br>● DISHA Consent Gate"]
-    end
-
-    subgraph Backend ["⚙️ Node.js + Express API (Port 5000)"]
-        B["● JWT Auth + bcryptjs<br>● Rate Limiting<br>● Cluster Load Balance<br>● SQLite (Offline Safe)<br>● CORS Whitelist<br>● 8s AI Timeouts"]
-    end
-
-    subgraph AIService ["🧠 FastAPI AI Microservice (Port 8000)"]
-        C["● Hybrid Neural Engine<br>● MLP on Transformer Embeddings<br>● RF Safety Fallback<br>● Outbreak Agent<br>● Safety Guardrails<br>● Sakhi RAG (38 chunks)"]
-    end
-
-    Frontend -->|HTTPS API Requests| Backend
-    Backend -->|JSON RPC Callbacks| AIService
-
-    classDef front fill:#e6fcf5,stroke:#0ca678,stroke-width:2px,color:#095c3e,font-weight:bold;
-    classDef back fill:#f1f3f5,stroke:#495057,stroke-width:2px,color:#212529,font-weight:bold;
-    classDef ai fill:#fff0f6,stroke:#d6336c,stroke-width:2px,color:#a61e4d,font-weight:bold;
-    classDef sub fill:#f8f9fa,stroke:#dee2e6,stroke-width:1px,stroke-dasharray: 5 5;
-
-    class A front;
-    class B back;
-    class C ai;
-    class Frontend,Backend,AIService sub;
+┌─────────────────────────┐     ┌──────────────────────────┐     ┌──────────────────────────┐
+│   React + Vite Frontend │────▶│  Node.js + Express API   │────▶│  FastAPI AI Microservice │
+│   Port 5173 (PWA)       │     │  Port 5000               │     │  Port 8000               │
+│                         │     │                          │     │                          │
+│  ● Luminous Emerald UI  │     │  ● JWT Auth + bcryptjs   │     │  ● **Hybrid Neural Engine** |
+│  ● 6-language i18n      │     │  ● Rate Limiting         │     │  ● **Transformer Model**   |
+│  ● Edge AI Skin Scan    │     │  ● Cluster Load Balance  │     │  ● **RF Safety Fallback**  |
+│  ● Voice In + Out       │     │  ● SQLite (offline safe) │     │  ● Outbreak Agent        |
+│  ● PWA installable      │     │  ● CORS Whitelist        │     │  ● **Safety Guardrails**   |
+│  ● DISHA Consent Gate   │     │  ● 8s AI timeouts        │     │  ● Sakhi RAG (38 chunks) |
+└─────────────────────────┘     └──────────────────────────┘     └──────────────────────────┘
 ```
-
 
 ---
 
@@ -118,7 +60,7 @@ graph LR
 | **Frontend** | React 18, Vite 5, Framer Motion 12, Lucide React, Recharts, React Router 6 |
 | **PWA** | `vite-plugin-pwa`, Web App Manifest, Service Worker, offline caching |
 | **Styling** | Tailwind CSS 3 — "Luminous Emerald Light" custom design system |
-| **Backend** | Node.js (ESM), Express 4, SQLite3 + **WAL mode** + **7 query indexes (V2)**, JWT, bcryptjs, express-rate-limit, axios |
+| **Backend** | Node.js (ESM), Express 4, SQLite3, JWT, bcryptjs, express-rate-limit, axios |
 | **AI Service** | Python, FastAPI, scikit-learn, pandas, joblib, PIL, Groq (Llama-3.1-8b) |
 | **RAG Engine** | Custom NumPy cosine similarity — no vector DB required |
 | **Agentic AI** | Autonomous outbreak monitor (Groq + FastAPI background thread) |
@@ -131,9 +73,9 @@ graph LR
 
 We utilize a tiered ensemble approach for clinical reliability in rural settings:
 
-*   **Primary Tier**: **SymptomNet** (Deep Learning MLP powered by multilingual Transformer embeddings: `paraphrase-multilingual-MiniLM-L12-v2`) for deep semantic understanding of **multilingual symptoms** (Hindi, Tamil, Marathi, Telugu, Bengali).
+*   **Primary Tier**: **SymptomNet** (PyTorch Neural Network) using `paraphrase-multilingual-MiniLM-L12-v2` embeddings for deep semantic understanding of **multilingual symptoms** (Hindi, Tamil, Marathi, Telugu, Bengali).
 *   **Secondary Tier**: **Random Forest Fallback** for robust keyword-based verification if neural confidence is borderline.
-*   **Tertiary Safety Tier — Clinical Heuristic Fallback (V2 Upgrade)**: If both models drop below 40% confidence due to ambiguous symptoms, the system absolutely refuses to guess or hallucinate false information. Instead, it routes the query to a deterministic, offline-capable rule engine built on ASHA guidelines to provide trusted first-aid advice, maximizing patient safety and trust.
+*   **Safety Tier**: **Double-Uncertainty Guardrail**. If both models are below 40% confidence, the system refuses to guess and prompts for more details.
 
 ### 🧠 AI Model Technical Specifications
 
@@ -143,7 +85,7 @@ We utilize a tiered ensemble approach for clinical reliability in rural settings
 | **Fallback Engine** | Random Forest + Gradient Boosting Ensemble |
 | **Dataset Size** | 800+ curated rural samples (Multilingual) |
 | **Inference Latency** | < 2.5s on standard CPU |
-| **Accuracy** | **96%+** (Neural) \| **89.4%** (Fallback) |
+| **Accuracy** | **96.8%** (Neural) \| **88.3%** (Fallback) |
 
 #### 📋 Supported Disease Classes (17)
 
@@ -156,39 +98,15 @@ We utilize a tiered ensemble approach for clinical reliability in rural settings
 | • Snakebite (**P1 Emergency**) | • Tuberculosis | • Typhoid |
 | • UTI | • Viral Fever | |
 
-**Safety Guardrails**: Neural Threshold (**0.70**) · RF Threshold (**0.40**) · `is_uncertain` flag · **V2: Clinical Heuristic Fallback** (6-language rule engine, zero-hallucination, ASHA-grounded advice)
+**Safety Guardrails**: Neural Threshold (**0.70**) · RF Threshold (**0.40**) · `is_uncertain` flag
 
-#### 🖼️ Dermatology: Two Ways to Diagnose
-SwasthAI Guardian provides two independent AI systems for health diagnostics:
+> **Note on Skin Diagnostics**: SwasthAI uses a dual-mode approach. (1) The **Symptom Engine** diagnoses 'Skin Infection' based on text/voice descriptions. (2) The **Skin Analyzer** performs pixel-level analysis of actual photos using on-device PIL processing.
 
-*   **Path A: Wide-Spectrum Diagnostic Engine** (via "Check Symptoms" page)
-    *   The main AI engine for all **17 supported diseases** (Malaria, Dengue, Snakebite, etc.).
-    *   It identifies "Skin Infection" as part of its general diagnostic range when described via voice/text.
-
-*   **Path B: Specialized Skin Scanner** (via "Skin Care" page)
-    *   **No Typing Required**: A dedicated, photo-based tool built specifically for dermatology.
-    *   **On-Device JavaScript Canvas Analysis**: Pixel-level skin tone detection, redness mapping, and inflammation scoring — entirely in the browser. No photo leaves the device.
-    *   **Hybrid Logic**: Combines pixel analysis with 3 clinical questions (Duration, Spread, Pain) for a high-confidence prediction.
-
----
-
----
-
-### 🧠 Model Training & Updates
-
-To retrain the high-performance **Neural Engine (SymptomNet)**:
+To retrain the disease model:
 ```bash
 cd ai-service
-python train_deep_model.py     # Generates deep_disease_model.pkl (96%+ Accuracy)
+python train_disease_model.py   # regenerates disease_model.pkl + model_accuracy.txt
 ```
-
-To retrain the **Random Forest Fallback**:
-```bash
-cd ai-service
-python train_disease_model.py   # Generates disease_model.pkl + model_accuracy.txt
-```
-
----
 
 ---
 
@@ -198,9 +116,9 @@ python train_disease_model.py   # Generates disease_model.pkl + model_accuracy.t
 
 | Feature | Details |
 |---|---|
-| **Symptom Checker** | Select symptoms or Voice Input → **Hybrid Neural AI** (96%+ acc) → Live Confidence Meter → Alternative Suggestions → **Safety Guardrail Protected** → **V2: If AI confidence is low, routes to Clinical Heuristic Fallback — zero hallucination, always returns ASHA-grounded advice in 6 languages**. |
+| **Symptom Checker** | Select symptoms or Voice Input → **Hybrid Neural AI** (96.8% acc) → Live Confidence Meter → Alternative Suggestions → **Safety Guardrail Protected**. |
 | **Sakhi — Women's Health AI** | Private RAG chatbot. Grounded in 38 WHO/MoHFW/FOGSI/ASHA/UNICEF citations. Voice output (press 🔊). Auto-speaks P1/P2 emergencies. Cites source with every answer. Groq falls back to KB chunk if API down. |
-| **Skin Disease Checker** | On-device JavaScript Canvas pixel analysis. No photo leaves the device. Camera + file upload. 3-question clinical confirmation. Image auto-compressed to <200KB for 2G networks. Downloadable `.txt` health report. |
+| **Skin Disease Checker** | On-device PIL pixel analysis. No photo leaves the device. Camera + file upload. 3-question clinical confirmation. Downloadable `.txt` health report. |
 | **Emergency Ambulance** | One-tap SOS. Real GPS coordinates captured via `navigator.geolocation`. Voice-to-text for landmark description. Offline fallback shows `tel:108`. |
 | **Sanitary Pad Request** | Discreet ASHA delivery request — private, no names visible to others. |
 | **Health Profile** | Secure health ID, past AI predictions, village ID, name management. |
@@ -214,7 +132,7 @@ python train_disease_model.py   # Generates disease_model.pkl + model_accuracy.t
 | **Maternal Health Tracker** | WHO-protocol pregnancy risk AI. Form collects **real vitals**: Age, Systolic BP, Diastolic BP, Blood Sugar (mmol/L), Body Temp, and Heart Rate. Live-color-coded sliders with danger thresholds. Pulsing red MoHFW banner fires instantly when BP ≥ 160/110. |
 | **Child Nutrition Monitor** | Weight/height/age inputs. WHO Z-score + BMI calculation. NHM protocol referral advice. SAM/MAM classification. |
 | **Village Health Dashboard** | Population stats, pregnancy cases, malnutrition counts, pad request alerts per village. |
-| **Outbreak Alerts** | **Village-Targeted warnings**—utilizes context-aware filtering to notify the local ASHA worker only if the AI agent detects a surge within their specific assigned village. |
+| **Outbreak Alerts** | AI-detected disease cluster notifications from the autonomous agent. |
 | **Ambulance Feed** | Live emergency request log for NGO area. |
 
 ### 🏛️ Admin Dashboard (District Hospital / Government)
@@ -222,7 +140,7 @@ python train_disease_model.py   # Generates disease_model.pkl + model_accuracy.t
 | Feature | Details |
 |---|---|
 | **District Analytics** | Real-time KPI dashboard across all registered villages with Recharts visualizations. |
-| **Outbreak Radar** | Autonomous AI agent that auto-classifies symptom clusters every 30 minutes. **Sends village-specific alerts** if 5+ cases are detected in one node within 24 hours. Features Groq Llama-3.1 epidemiology reasoning. |
+| **Outbreak Radar** | AI agent auto-classifies symptom clusters every 30 minutes. Auto-alert if 5+ similar cases from one village. Groq Llama-3.1 epidemiology classification. |
 | **CSV Export** | Download full district health data as a spreadsheet. |
 | **Ambulance Management** | Full emergency request log with timestamps and GPS coordinates. |
 | **Village Registry** | Add/manage village records, ASHA contacts, population data. |
@@ -251,7 +169,6 @@ Designed to work on ₹3,000–₹7,000 Android phones on 2G/3G:
 | **Battery saving** | `@media (prefers-reduced-motion: reduce)` kills all animations |
 | **WCAG tap targets** | `.tap-target` utility — minimum 44×44px for fat-finger usability |
 | **2G timeout** | 8-second axios timeout — never hangs forever |
-| **Edge Compression** | On-device `browser-image-compression` (5MB+ to <200KB) to prevent 2G packet loss |
 | **Offline toast** | YouTube-style banner when data cuts mid-session |
 | **PWA caching** | Core assets cached on install — loads without internet |
 
@@ -399,12 +316,12 @@ Swasthai-Guardian-Up/
 │           └── api.js                ← 8s timeout + error interceptor
 │
 ├── backend/
-│   └── server.js                 # All routes, auth, DB schema + V2 offline AI fallback (6-lang rule engine)
+│   └── server.js                 # 665 lines — all routes, auth, DB schema
 │
 ├── ai-service/
-│   ├── main.py                   # Hybrid Diagnostic Hub (70% Neural → RF → V2 Heuristic Fallback)
+│   ├── main.py                   # Hybrid Diagnostic Hub (70% Neural Threshold)
 │   ├── model_def.py              # SymptomNet PyTorch Architecture
-│   ├── deep_disease_model.pkl    # Trained Neural Engine (96.8% accuracy)
+│   ├── deep_disease_model.pkl    # Trained Transformer Engine (96.8% accuracy)
 │   ├── disease_model.pkl         # Random Forest Fallback (91.3% accuracy)
 │   ├── rag_service.py            # Sakhi RAG with Groq + KB fallback
 │   ├── outbreak_agent.py         # Autonomous 30-min epidemic scanner
@@ -439,10 +356,9 @@ Top-3 chunks selected from:
    • UNICEF Maternal Nutrition Framework
    • NHM India Menstrual Hygiene Scheme
        ↓
-Groq Llama-3.3-70b-versatile
+Groq Llama-3.1-8b-instant (10s timeout)
    ├── Success → Structured answer with citation + urgency badge
-   └── Failure (Jitter) → Exponential retry (3 attempts: 1s, 2s, 4s backoff)
-   └── Full Outage → Top-1 KB chunk served directly as fallback (never silent failure)
+   └── Failure → Top-1 KB chunk served directly (never silent failure)
        ↓
 Response includes: answer · sources[] · urgency (P1/P2/P3/P4)
 Voice output via SpeechSynthesisUtterance (🔊 button per message)
@@ -450,9 +366,18 @@ Voice output via SpeechSynthesisUtterance (🔊 button per message)
 
 ---
 
+## 👥 Development Team
+
+| Name | Role |
+|---|---|
+| **Divyansh Gupta** | AI/ML · Backend Architecture · AI Service · Deployment |
+| **Tejshvee Yerpurwad** | Founder · Product Vision . Frontend · UX Design · Language Support · RAG Engine |
+
+---
+
 ## 📄 License
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 📜 Compliance & Standards
 
