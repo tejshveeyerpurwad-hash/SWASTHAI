@@ -377,7 +377,9 @@ Voice output via SpeechSynthesisUtterance (🔊 button per message)
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## License
+
+This project is licensed under the GNU AGPL-3.0 License.
 
 ## 📜 Compliance & Standards
 
