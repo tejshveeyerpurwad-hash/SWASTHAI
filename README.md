@@ -13,7 +13,7 @@ Most health apps call a third-party AI API and display the result. SwasthAI **ow
 
 ## 🏆 Strategic Competitive Advantage (IEEE/Hackathon Focus)
 
-*SwasthAI Guardian was built to win. We didn't just build a dashboard; we built a fault-tolerant medical infrastructure.*
+*SwasthAI Guardian was built to address healthcare accessibility challenges across rural India through AI-powered, multilingual, and offline-first healthcare services. We didn't just build a dashboard; we built a healthcare infrastructure designed for Bharat's underserved communities.*
 
 1.  **Grounded Intelligence**: Unlike competitors using generic LLM prompts, our **Sakhi RAG engine** is grounded in 38 curated clinical chunks from WHO and MoHFW. Every answer is a medical citation.
 2.  **Autonomous Epidemiology**: Our **Agentic Outbreak Radar** scans village data every 30 minutes to detect clusters. It doesn't wait for a doctor to report an epidemic; it detects it.
@@ -279,63 +279,60 @@ A **Demo Credentials banner** is shown at the bottom of the login page.
 
 > On first login, the DISHA 2023 consent modal will appear. Click "Haan, Main Samjha — I Agree" to proceed.
 
----
+## 📸 Application Screenshots
+
+Application screenshots are available in the `/screenshots` directory.
+
+### Included Screenshots
+
+* Landing Page
+* Villager Dashboard
+* NGO / ASHA Dashboard
+* Admin Dashboard
+* AI Symptom Checker
+* Sakhi Women's Health Assistant
+* Emergency Ambulance System
+* Maternal Health Tracker
+* Child Nutrition Monitoring
+* District Analytics Dashboard
+
 
 ## 📁 Repository Structure
 
-```
-Swasthai-Guardian-Up/
-├── frontend/                     # React + Vite PWA
-│   └── src/
-│       ├── App.jsx               # Router + ConsentGate (DISHA modal)
-│       ├── index.css             # Design system + mobile optimizations
-│       ├── Admin/                # AdminDashboard.jsx
-│       ├── NGO/                  # NGODashboard.jsx
-│       ├── Villager/             # VillagerDashboard.jsx
-│       ├── pages/                # Feature pages (13 active routes)
-│       │   ├── SymptomCheckerPage.jsx
-│       │   ├── SkinDiseaseCheckerPage.jsx
-│       │   ├── AmbulancePage.jsx
-│       │   ├── MenstrualHealth.jsx   ← Sakhi RAG + Voice I/O
-│       │   ├── MaternalHealthPage.jsx ← Real vitals sliders
-│       │   ├── ChildNutritionPage.jsx
-│       │   ├── LoginPage.jsx
-│       │   ├── RegisterPage.jsx
-│       │   ├── UserProfile.jsx
-│       │   ├── LandingPage.jsx
-│       │   └── IntroFlow.jsx
-│       ├── components/
-│       │   ├── Navbar.jsx
-│       │   ├── Footer.jsx
-│       │   ├── OfflineToast.jsx      ← YouTube-style offline banner
-│       │   └── DiSHAConsentModal.jsx ← DISHA 2023 consent gate
-│       ├── context/
-│       │   ├── AuthContext.jsx       ← JWT + bcrypt auth
-│       │   └── LanguageContext.jsx   ← 6-language i18n
-│       └── services/
-│           └── api.js                ← 8s timeout + error interceptor
+```text
+SWASTHAI/
 │
-├── backend/
-│   └── server.js                 # 665 lines — all routes, auth, DB schema
+├── frontend/                          # React + Vite Progressive Web App
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   └── vite.config.js
 │
-├── ai-service/
-│   ├── main.py                   # Hybrid Diagnostic Hub (70% Neural Threshold)
-│   ├── model_def.py              # SymptomNet PyTorch Architecture
-│   ├── deep_disease_model.pkl    # Trained Transformer Engine (96.8% accuracy)
-│   ├── disease_model.pkl         # Random Forest Fallback (91.3% accuracy)
-│   ├── rag_service.py            # Sakhi RAG with Groq + KB fallback
-│   ├── outbreak_agent.py         # Autonomous 30-min epidemic scanner
-│   ├── skin_analyzer.py          # On-device PIL pixel analysis
-│   ├── train_deep_model.py       # Neural network training script
-│   ├── train_disease_model.py    # RF model training script (800+ samples)
-│   ├── test_guardrail.py         # Safety validation suite
-│   ├── test_rural.py             # Rural stress testing script
+├── backend/                           # Node.js + Express Backend API
+│   ├── server.js
+│   ├── package.json
+│   ├── routes/
+│   └── middleware/
+│
+├── ai-service/                        # FastAPI + AI/ML Engine
+│   ├── main.py
+│   ├── rag_service.py
+│   ├── outbreak_agent.py
+│   ├── skin_analyzer.py
+│   ├── train_disease_model.py
+│   ├── train_deep_model.py
 │   └── requirements.txt
 │
-└── README.md
+├── screenshots/                       # Application Screenshots
+│
+├── README.md                          # Main Project Documentation
+├── PITCH.md                           # Hackathon Pitch
+├── Menstrual_Health_Design.md         # Women's Health Design Documentation
+├── docker-compose.yml                 # Multi-Service Deployment
+├── package.json                       # Root Configuration
+├── .env.example                       # Environment Variable Template
+└── LICENSE                            # GNU AGPL-3.0 License
 ```
-
----
 
 ## 🧠 Sakhi RAG Architecture (Women's Health AI)
 
@@ -376,8 +373,6 @@ Voice output via SpeechSynthesisUtterance (🔊 button per message)
 ---
 
 ## 📄 License
-
-## License
 
 This project is licensed under the GNU AGPL-3.0 License.
 
