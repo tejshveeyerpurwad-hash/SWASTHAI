@@ -172,6 +172,21 @@ export default function Navbar() {
           </div>
         )}
 
+        {/* DevDays Journey Link (Desktop Only) */}
+        <div className="hidden lg:flex items-center gap-1">
+          <Link 
+            to="/devdays"
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+              isActive('/devdays')
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-50'
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            DevDays Journey
+          </Link>
+        </div>
+
         {/* Right Section */}
         <div className="flex items-center gap-2 shrink-0">
 
@@ -325,6 +340,18 @@ export default function Navbar() {
                 <Home className={`w-4 h-4 ${isActive('/admin') ? 'text-white' : 'text-emerald-600'}`} /> {t.nav?.admin_hub || 'District Hub'}
               </Link>
             )}
+
+            {/* DevDays Journey mobile link */}
+            <Link 
+              to="/devdays" 
+              onClick={() => setMobileMenuOpen(false)} 
+              className={`flex items-center gap-3 p-3.5 rounded-2xl text-sm font-black uppercase tracking-wide transition-all ${
+                isActive('/devdays') ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <BookOpen className={`w-4 h-4 ${isActive('/devdays') ? 'text-white' : 'text-emerald-600'}`} />
+              DevDays Journey
+            </Link>
 
             {/* Profile Link (for all roles) */}
             {user && (

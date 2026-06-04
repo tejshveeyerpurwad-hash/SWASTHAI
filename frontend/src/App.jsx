@@ -20,6 +20,7 @@ import UserProfile from './pages/UserProfile';
 import MenstrualHealth from './pages/MenstrualHealth';
 import MaternalHealthPage from './pages/MaternalHealthPage';
 import ChildNutritionPage from './pages/ChildNutritionPage';
+import DevDaysJourney from './pages/DevDaysJourney';
 
 // Components
 import Footer from './components/Footer';
@@ -74,11 +75,14 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
-              {/* CORE DOMAINS - Role Specific Dashboards */}
               <Route path="/home" element={
                 <ProtectedRoute>
                   <LayoutWrapper><LandingPage /></LayoutWrapper>
                  </ProtectedRoute>
+              } />
+
+              <Route path="/devdays" element={
+                <LayoutWrapper><DevDaysJourney /></LayoutWrapper>
               } />
 
               <Route path="/villager" element={
