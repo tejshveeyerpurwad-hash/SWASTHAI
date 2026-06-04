@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   BrainCircuit, WifiOff, Globe, Github, Activity, HeartPulse,
@@ -6,10 +6,90 @@ import {
   Database, Zap, Smartphone, AppWindow, BookOpen, TrendingUp,
   Languages, Mic, Map, Eye, Menu, Smile, GitBranch, Code,
   FileText, GitMerge, GitCommit, Code2, UserCheck, Terminal, Book,
-  BarChart3, Crosshair, Stethoscope, ShieldCheck, Heart, ArrowRight
+  BarChart3, Crosshair, Stethoscope, ShieldCheck, Heart, ArrowRight,
+  Server
 } from 'lucide-react';
 
 const DevDaysJourney = () => {
+  const [activeStage, setActiveStage] = useState(0);
+
+  const architectureStages = [
+    {
+      id: 0,
+      title: "User Tiers & Client Access",
+      subtitle: "Villager / NGO / Admin Interfaces",
+      tech: "React 18 / Lucide",
+      icon: Users,
+      color: "from-emerald-500 to-teal-500",
+      layers: ["Voice Processing Layer"],
+      logs: [
+        " Villager voice input: 'Bukhar aur sir dard hai...'",
+        " STT Node: Transcribing audio into text...",
+        " Language detected: Hindi (hi)",
+        " Routing query to Frontend Controller..."
+      ]
+    },
+    {
+      id: 1,
+      title: "React + Vite Frontend (PWA)",
+      subtitle: "Offline First User Client",
+      tech: "Vite / Workbox / Tailwind",
+      icon: Smartphone,
+      color: "from-blue-500 to-indigo-500",
+      layers: ["Offline PWA Layer", "Voice Processing Layer"],
+      logs: [
+        " Service Worker: Intercepting fetch requests...",
+        " Cache status: HIT (core UI assets served offline)",
+        " Network status: DEGRADED (Switching to edge fallback)",
+        " Local Storage: Synced local health logs cache"
+      ]
+    },
+    {
+      id: 2,
+      title: "Node.js + Express Backend",
+      subtitle: "API Gateway & Security Proxy",
+      tech: "Express / JWT / bcryptjs",
+      icon: Server,
+      color: "from-purple-500 to-pink-500",
+      layers: ["Authentication Layer"],
+      logs: [
+        " POST /api/auth/login-otp - 200 OK",
+        " JWT: Issued 7-day token for ASHA worker (NGO)",
+        " DISHA Validator: Consent flag found in payload",
+        " CORS: Origin http://localhost:5173 authorized"
+      ]
+    },
+    {
+      id: 3,
+      title: "FastAPI AI Service",
+      subtitle: "Algorithmic Diagnostic Engine",
+      tech: "FastAPI / PyTorch / Groq",
+      icon: BrainCircuit,
+      color: "from-amber-500 to-orange-500",
+      layers: ["Sakhi RAG Engine", "Disease Prediction Engine", "Outbreak Detection Agent"],
+      logs: [
+        " PyTorch: SymptomNet neural confidence score: 0.88",
+        " Prediction: 'Viral Fever' (Neural verification PASSED)",
+        " RAG matching: Cosine similarity 0.76 with WHO Reproductive Health Chunks",
+        " Outbreak Agent: 5 cases of Cholera detected in village ID: 412"
+      ]
+    },
+    {
+      id: 4,
+      title: "SQLite Database",
+      subtitle: "Offline-First Healthcare Storage",
+      tech: "SQLite",
+      icon: Database,
+      color: "from-rose-500 to-red-500",
+      layers: [],
+      logs: [
+        " SQLite: Active journal mode: WAL",
+        " Query: SELECT * FROM symptoms WHERE villageId = 'v101'",
+        " Index scan: idx_symptoms_villageId - COST: 0.01",
+        " Transaction: Write completed (WAL checkpoint passed)"
+      ]
+    }
+  ];
   // Animation presets
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -265,6 +345,227 @@ const DevDaysJourney = () => {
                 </motion.div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* VISUAL ARCHITECTURE PIPELINE */}
+      <section className="py-20 bg-slate-50 border-b border-slate-100 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-emerald-600 font-black uppercase tracking-[0.2em] text-xs">
+              System Topography
+            </span>
+            <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase mt-2 mb-4">
+              Full-Stack Resilient Architecture
+            </h2>
+            <div className="h-1.5 w-24 bg-emerald-600 mx-auto rounded-full" />
+            <p className="text-slate-500 font-medium max-w-2xl mx-auto mt-4 text-sm md:text-base">
+              A high-availability, layered health data flow designed for extreme rural operational resilience, voice-directed UI access, and local AI capabilities.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+            {/* Left Flow track (Interactive Tiers) */}
+            <div className="lg:col-span-5 flex flex-col gap-4 relative">
+              {/* Vertical connecting line */}
+              <div className="absolute left-8 top-12 bottom-12 w-0.5 bg-slate-200 pointer-events-none hidden sm:block" />
+
+              {architectureStages.map((stage, idx) => {
+                const IsActive = activeStage === stage.id;
+                return (
+                  <motion.div
+                    key={stage.title}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => setActiveStage(stage.id)}
+                    className={`p-6 rounded-[2rem] border transition-all duration-305 cursor-pointer flex gap-4 items-start relative sm:pl-16 ${
+                      IsActive
+                        ? "bg-white border-emerald-500 shadow-xl shadow-emerald-500/5 ring-1 ring-emerald-500/20"
+                        : "bg-slate-50/50 border-slate-100 hover:bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    {/* Circle timeline indicator */}
+                    <div className={`absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full border-2 flex items-center justify-center z-10 transition-colors duration-300 hidden sm:flex ${
+                      IsActive 
+                        ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-500/30" 
+                        : "bg-white border-slate-200 text-slate-400"
+                    }`}>
+                      <span className="text-xs font-bold">{idx + 1}</span>
+                    </div>
+
+                    <div className={`p-3 rounded-2xl bg-gradient-to-br ${stage.color} text-white shadow-md`}>
+                      <stage.icon className="w-5 h-5" />
+                    </div>
+
+                    <div className="space-y-1 flex-1">
+                      <div className="flex justify-between items-start flex-wrap gap-2">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          {stage.tech}
+                        </span>
+                        {IsActive && (
+                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase tracking-wider rounded-md">
+                            Active Stream
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-base font-black text-slate-900 tracking-tight leading-tight">
+                        {stage.title}
+                      </h3>
+                      <p className="text-xs font-semibold text-slate-500">
+                        {stage.subtitle}
+                      </p>
+                    </div>
+                    {IsActive && (
+                      <div className="hidden lg:block absolute -right-4 top-1/2 -translate-y-1/2 text-emerald-500 font-bold">
+                        <ArrowRight className="w-5 h-5" />
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Right Terminal Console (Stage Details) */}
+            <div className="lg:col-span-7 flex flex-col">
+              <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-6 sm:p-8 text-slate-100 flex flex-col justify-between shadow-2xl relative overflow-hidden flex-1 group min-h-[480px]">
+                {/* Decorative background grid */}
+                <div className="absolute inset-0 bg-[radial-gradient(rgba(16,185,129,0.05)_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+
+                {/* Console header */}
+                <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6 relative z-10">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-rose-500" />
+                    <span className="w-3 h-3 rounded-full bg-amber-500" />
+                    <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">
+                      swasthai-telemetry-proxy
+                    </span>
+                  </div>
+                  <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase tracking-widest rounded-full">
+                    status: operational
+                  </span>
+                </div>
+
+                {/* Console Content */}
+                <div className="space-y-6 relative z-10 flex-1 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-black text-white tracking-tight uppercase">
+                      {architectureStages[activeStage].title}
+                    </h3>
+                    <p className="text-sm font-semibold text-emerald-400">
+                      {architectureStages[activeStage].subtitle}
+                    </p>
+                  </div>
+
+                  {/* Grid of requested architecture layers */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Voice Processing Layer */}
+                    <div className={`p-4 rounded-2xl border transition-all duration-300 ${
+                      architectureStages[activeStage].layers.includes("Voice Processing Layer")
+                        ? "bg-emerald-950/35 border-emerald-500/40 text-emerald-100 shadow-lg shadow-emerald-500/5"
+                        : "bg-slate-950/40 border-slate-850/80 text-slate-600"
+                    }`}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Mic className={`w-4.5 h-4.5 ${architectureStages[activeStage].layers.includes("Voice Processing Layer") ? "text-emerald-400" : "text-slate-650"}`} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Voice Processing Layer</span>
+                      </div>
+                      <p className="text-[10px] font-semibold leading-relaxed">
+                        Provides multilingual speech synthesis and speech-to-text transcriptions on-device.
+                      </p>
+                    </div>
+
+                    {/* Offline PWA Layer */}
+                    <div className={`p-4 rounded-2xl border transition-all duration-300 ${
+                      architectureStages[activeStage].layers.includes("Offline PWA Layer")
+                        ? "bg-blue-950/35 border-blue-500/40 text-blue-100 shadow-lg shadow-blue-500/5"
+                        : "bg-slate-950/40 border-slate-850/80 text-slate-600"
+                    }`}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <WifiOff className={`w-4.5 h-4.5 ${architectureStages[activeStage].layers.includes("Offline PWA Layer") ? "text-blue-400" : "text-slate-655"}`} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Offline PWA Layer</span>
+                      </div>
+                      <p className="text-[10px] font-semibold leading-relaxed">
+                        Forces complete page offline viability using Workbox service worker caching.
+                      </p>
+                    </div>
+
+                    {/* Authentication Layer */}
+                    <div className={`p-4 rounded-2xl border transition-all duration-300 ${
+                      architectureStages[activeStage].layers.includes("Authentication Layer")
+                        ? "bg-purple-950/35 border-purple-500/40 text-purple-100 shadow-lg shadow-purple-500/5"
+                        : "bg-slate-950/40 border-slate-850/80 text-slate-600"
+                    }`}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Lock className={`w-4.5 h-4.5 ${architectureStages[activeStage].layers.includes("Authentication Layer") ? "text-purple-400" : "text-slate-655"}`} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Authentication Layer</span>
+                      </div>
+                      <p className="text-[10px] font-semibold leading-relaxed">
+                        Guarantees role-restricted API access with token validations and crypt passes.
+                      </p>
+                    </div>
+
+                    {/* Sakhi RAG Engine */}
+                    <div className={`p-4 rounded-2xl border transition-all duration-300 ${
+                      architectureStages[activeStage].layers.includes("Sakhi RAG Engine")
+                        ? "bg-amber-950/35 border-amber-500/40 text-amber-100 shadow-lg shadow-amber-500/5"
+                        : "bg-slate-950/40 border-slate-850/80 text-slate-600"
+                    }`}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Sparkles className={`w-4.5 h-4.5 ${architectureStages[activeStage].layers.includes("Sakhi RAG Engine") ? "text-amber-400" : "text-slate-655"}`} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Sakhi RAG Engine</span>
+                      </div>
+                      <p className="text-[10px] font-semibold leading-relaxed">
+                        Locks AI outputs strictly inside clinical modules via RAG similarity searches.
+                      </p>
+                    </div>
+
+                    {/* Disease Prediction Engine */}
+                    <div className={`p-4 rounded-2xl border transition-all duration-300 ${
+                      architectureStages[activeStage].layers.includes("Disease Prediction Engine")
+                        ? "bg-orange-950/35 border-orange-500/40 text-orange-100 shadow-lg shadow-orange-500/5"
+                        : "bg-slate-950/40 border-slate-850/80 text-slate-600"
+                    }`}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <BrainCircuit className={`w-4.5 h-4.5 ${architectureStages[activeStage].layers.includes("Disease Prediction Engine") ? "text-orange-400" : "text-slate-655"}`} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Disease Prediction Engine</span>
+                      </div>
+                      <p className="text-[10px] font-semibold leading-relaxed">
+                        Combines Transformer embeddings with random forest safety backup models.
+                      </p>
+                    </div>
+
+                    {/* Outbreak Detection Agent */}
+                    <div className={`p-4 rounded-2xl border transition-all duration-300 ${
+                      architectureStages[activeStage].layers.includes("Outbreak Detection Agent")
+                        ? "bg-rose-950/35 border-rose-500/40 text-rose-100 shadow-lg shadow-rose-500/5"
+                        : "bg-slate-950/40 border-slate-850/80 text-slate-600"
+                    }`}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <TrendingUp className={`w-4.5 h-4.5 ${architectureStages[activeStage].layers.includes("Outbreak Detection Agent") ? "text-rose-400" : "text-slate-655"}`} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Outbreak Detection Agent</span>
+                      </div>
+                      <p className="text-[10px] font-semibold leading-relaxed">
+                        Performs automated telemetry analytics every 30 minutes to detect infection nodes.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Simulated Telemetry Log Console */}
+                  <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800/80 font-mono text-[10px] text-slate-400 space-y-1.5 overflow-hidden">
+                    <div className="flex items-center justify-between text-slate-600 border-b border-slate-900 pb-1 mb-2 font-black uppercase tracking-widest text-[8px]">
+                      <span>Live Terminal Activity</span>
+                      <span className="animate-pulse text-emerald-500">● Live</span>
+                    </div>
+                    {architectureStages[activeStage].logs.map((log, idx) => (
+                      <div key={idx} className="flex gap-2 items-start">
+                        <span className="text-emerald-500 shrink-0 select-none">➜</span>
+                        <span className="break-all">{log}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
