@@ -1117,6 +1117,28 @@ CRITICAL CLINICAL & TRANSLATION SAFEGUARDS:
       });
     });
 
+    // Root health endpoint for Render (returns same payload as /health)
+    app.get('/', (req, res) => {
+      res.json({
+        status: 'ok',
+        service: 'SwasthAI Guardian Backend',
+        uptime: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString(),
+        worker: process.pid,
+      });
+    });
+
+    // New root health endpoint for Render compatibility (returns same payload)
+    app.get('/health', (req, res) => {
+      res.json({
+        status: 'ok',
+        service: 'SwasthAI Guardian Backend',
+        uptime: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString(),
+        worker: process.pid,
+      });
+    });
+
     // ── STATIC FILE SERVING (Production) ──────────────────────────────────
     if (process.env.NODE_ENV === 'production') {
       const frontendPath = path.resolve(__dirname, '../frontend/dist');
