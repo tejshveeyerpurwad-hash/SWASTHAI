@@ -239,43 +239,46 @@ HEALTH_KNOWLEDGE = [
     },
 ]
 
-# ── Lazy-Loaded Embeddings (loaded once on first request) ──────────────────────
-_embedder      = None
-_kb_embeddings = None
+# ── Lazy-Loaded TF-IDF Vectorizer (loaded once on first request) ────────────────
+_vectorizer = None
+_kb_tfidf = None
 
 # Pre-extract plain text for embedding
 _TEXTS = [chunk["text"] for chunk in HEALTH_KNOWLEDGE]
 
 
-def _get_embedder():
-    global _embedder
-    if _embedder is None:
-        from sentence_transformers import SentenceTransformer
-        print("[RAG] Loading multilingual embedding model (one-time)...")
-        _embedder = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
-        print("[RAG] Embedding model loaded.")
-    return _embedder
+def _get_vectorizer():
+    global _vectorizer
+    if _vectorizer is None:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        print("[RAG] Initializing TF-IDF Vectorizer...")
+        _vectorizer = TfidfVectorizer(ngram_range=(1, 2), sublinear_tf=True)
+        _vectorizer.fit(_TEXTS)
+        print("[RAG] TF-IDF Vectorizer initialized.")
+    return _vectorizer
 
 
 def _get_kb_embeddings():
-    global _kb_embeddings
-    if _kb_embeddings is None:
-        embedder = _get_embedder()
-        _kb_embeddings = embedder.encode(_TEXTS, normalize_embeddings=True)
-        print(f"[RAG] Knowledge base embedded: {len(HEALTH_KNOWLEDGE)} chunks.")
-    return _kb_embeddings
+    global _kb_tfidf
+    if _kb_tfidf is None:
+        vectorizer = _get_vectorizer()
+        _kb_tfidf = vectorizer.transform(_TEXTS)
+        print(f"[RAG] Knowledge base TF-IDF vectorized: {len(HEALTH_KNOWLEDGE)} chunks.")
+    return _kb_tfidf
 
 
 def _retrieve(query: str, top_k: int = 3) -> tuple[list[dict], float]:
     """
-    Cosine similarity retrieval — returns full structured knowledge objects and the maximum similarity score.
+    TF-IDF based cosine similarity retrieval — returns full structured knowledge objects and the maximum similarity score.
     Each object has {text, source, urgency} for grounded citation display.
-    Zero external dependency: uses numpy dot product on L2-normalized vectors.
     """
-    embedder = _get_embedder()
-    kb_embs = _get_kb_embeddings()
-    query_emb = embedder.encode([query], normalize_embeddings=True)[0]
-    scores = np.dot(kb_embs, query_emb)
+    vectorizer = _get_vectorizer()
+    kb_tfidf = _get_kb_embeddings()
+    query_tfidf = vectorizer.transform([query])
+    
+    from sklearn.metrics.pairwise import cosine_similarity
+    scores = cosine_similarity(kb_tfidf, query_tfidf).flatten()
+    
     max_score = float(np.max(scores)) if len(scores) > 0 else 0.0
     top_indices = np.argsort(scores)[-top_k:][::-1]
     return [HEALTH_KNOWLEDGE[i] for i in top_indices], max_score

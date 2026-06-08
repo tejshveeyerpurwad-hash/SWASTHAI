@@ -369,7 +369,7 @@ export default function AdminDashboard() {
                     { step: '1', t: 'Symptom Ingestion', d: 'Villager submits symptoms via app/voice.' },
                     { step: '2', t: 'Pattern Mapping', d: 'AI classifies cases against MoHFW disease database.' },
                     { step: '3', t: 'Cluster Trigger', d: 'Agent detects ≥ 3 cases in 24h at same village node.' },
-                    { step: '4', t: 'District Alert', d: 'Outbreak confirmed via Groq Llama-3.1 epidemiology model.' },
+                    { step: '4', t: 'District Alert', d: 'Outbreak confirmed via Groq Llama-3.3 epidemiology model.' },
                   ].map(item => (
                     <div key={item.step} className="flex gap-4 items-start">
                       <div className="w-8 h-8 bg-slate-900 text-white rounded-xl flex items-center justify-center font-black text-xs shrink-0">{item.step}</div>

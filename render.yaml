@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: swasthai-guardian
+    name: swasthai-guardian-app
     runtime: node
     plan: free
     buildCommand: npm run build
@@ -15,4 +15,20 @@ services:
       - key: DATA_DIR
         value: .
       - key: GROQ_API_KEY
-        sync: false # Set this in the Render Dashboard for security
+        sync: false
+      - key: AI_SERVICE_URL
+        value: https://swasthai-ai-hub.onrender.com
+
+  - type: web
+    name: swasthai-ai-hub
+    runtime: python
+    plan: free
+    buildCommand: cd ai-service && pip install -r requirements.txt && python train_disease_model.py
+    startCommand: cd ai-service && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: GROQ_API_KEY
+        sync: false
+      - key: BACKEND_URL
+        value: https://swasthai-guardian-app.onrender.com

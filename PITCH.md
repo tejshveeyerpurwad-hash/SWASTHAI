@@ -1,6 +1,6 @@
 # SwasthAI Guardian: Integrated Rural Health Platform
 
-> **Note to Judges:** Our attached demo video showcases the V1 foundation of our platform. Below is the documentation for our **V2 Production Upgrade**, which introduces Grounded RAG, Offline Login, and an Autonomous Outbreak Agent.
+> **Note to Judges:** Below is the documentation for SwasthAI Guardian, detailing the production platform including Grounded RAG, Offline Login, and an Autonomous Outbreak Agent.
 
 A production-grade, AI-powered healthcare platform built for rural India. Connecting remote villagers, ASHA health workers, and district hospitals through real machine learning, offline-first architecture, and regional language support.
 
@@ -18,20 +18,20 @@ Our goal was to build a scalable, AI-powered digital health ecosystem that bridg
 
 **SwasthAI Guardian** is an offline-first, role-based healthcare platform connecting Villagers, ASHA/NGO workers, and Hospital Administrators into a single unified ecosystem.
 
-### 🚀 Technical Differentiation (V1 to V2 Evolution)
+### 🚀 Technical Innovation Highlights
 
 Most health applications simply call a third-party AI API and display the result. SwasthAI owns its intelligence and operates securely, even without a stable internet connection:
 
-*   **Custom Medical AI (Upgraded to V2 SymptomNet):** We evolved from our V1 Random Forest model to a custom Transformer-based Deep Learning model (**SymptomNet**). Trained on rural Indian disease patterns, it now achieves **96.8% diagnostic accuracy**.
-*   **"Sakhi" Women's Health AI (Upgraded to V2 Grounded RAG):** Our private conversational AI for women's health is now powered by a **Grounded RAG (Retrieval-Augmented Generation)** system. It retrieves clinical chunks from official WHO/MoHFW guidelines before answering, entirely eliminating AI hallucinations.
-*   **Agentic Outbreak Radar (New in V2):** An autonomous background AI agent scans village clinical data every 30 minutes. If it detects a localized symptom cluster (e.g., 5+ cases of fever in one village), it triggers instant, targeted notifications for both District Admins and local ASHA workers to stop outbreaks before they become epidemics.
-*   **Hardened Offline-First Sync (New in V2):** We engineered an **Offline-First Login**. Using IndexedDB and Service Workers, ASHA workers in zero-signal zones can securely log in, verify credentials, access cached data, and record patient vitals. The data auto-syncs when the device reaches a 2G/3G network.
-*   **Smart Share Peer-to-Peer (New in V2):** A high-visibility Share Button generates a **Dynamic QR Code**, allowing villagers and ASHA workers to distribute the PWA instantly without needing an app store or internet connection.
+*   **Custom Medical AI (SymptomNet):** Powered by a custom Transformer-based Deep Learning model (**SymptomNet**). Trained on rural Indian disease patterns, it achieves **96.8% diagnostic accuracy**.
+*   **"Sakhi" Women's Health AI (Grounded RAG):** Our private conversational AI for women's health is powered by a **Grounded RAG (Retrieval-Augmented Generation)** system. It retrieves clinical chunks from official WHO/MoHFW guidelines before answering, entirely eliminating AI hallucinations.
+*   **Agentic Outbreak Radar:** An autonomous background AI agent scans village clinical data every 30 minutes. If it detects a localized symptom cluster (e.g., 5+ cases of fever in one village), it triggers instant, targeted notifications for both District Admins and local ASHA workers to stop outbreaks before they become epidemics.
+*   **Hardened Offline-First Sync:** We engineered an **Offline-First Login**. Using IndexedDB and Service Workers, ASHA workers in zero-signal zones can securely log in, verify credentials, access cached data, and record patient vitals. The data auto-syncs when the device reaches a 2G/3G network.
+*   **Smart Share Peer-to-Peer:** A high-visibility Share Button generates a **Dynamic QR Code**, allowing villagers and ASHA workers to distribute the PWA instantly without needing an app store or internet connection.
 *   **Full Native Localization & Voice:** The entire platform dynamically supports **6 languages natively**, with Voice-to-Text integration ensuring non-literate users can interact with complex medical AI seamlessly.
 
 ---
 
-## System Architecture (V2)
+## System Architecture
 
 ```text
 +-------------------------+     +--------------------------+     +------------------------+
@@ -103,7 +103,7 @@ Most health applications simply call a third-party AI API and display the result
 ### AI Services
 *   Python FastAPI Microservice
 *   SymptomNet Transformer Model
-*   Groq-powered Llama 3.1
+*   Groq-powered Llama 3.3
 *   Grounded RAG Architecture
 *   Autonomous Outbreak Detection Agent
 

@@ -67,7 +67,7 @@ SwasthAI Guardian is an **offline-first, multi-role digital healthcare ecosystem
 
 ### 2. Sakhi RAG — Maternal & Women's Health AI
 * **Grounded LLM Retrieval:** A conversational AI specializing in maternal health and hygiene, powered by a Grounded Retrieval-Augmented Generation (RAG) loop. 
-* **NumPy Cosine Similarity:** Employs local NumPy cosine similarity search to retrieve relevant guidelines from **38 official clinical knowledge chunks** (WHO, MoHFW, FOGSI, UNICEF, and NHM) before querying Groq's Llama-3.1 API.
+* **Lightweight Local TF-IDF & Cosine Similarity:** Employs a local TF-IDF vectorizer (with scikit-learn cosine similarity) to retrieve relevant guidelines from **38 official clinical knowledge chunks** (WHO, MoHFW, FOGSI, UNICEF, and NHM) before querying Groq's Llama-3.3 API, allowing the entire engine to run efficiently under 100MB of RAM.
 * **Zero-Failure Fallback:** In the event of a network failure, the system falls back gracefully to serve the top-matching local clinical guideline snippet directly, guaranteeing that the user receives reliable information without silent crashes.
 * **Bilingual Privacy Gate:** Built on the Digital Information Security in Healthcare Act (DISHA 2023) and IT Act 2008 standards, prompting users with a clear bilingual Hindi/English data consent modal.
 
@@ -98,8 +98,8 @@ SwasthAI is divided into three isolated, independently deployable services:
 * **FastAPI AI Microservice:** Python 3.11 web service serving machine learning models, PIL image checkers, and the agentic outbreak engine.
 
 ### 2. Deep Learning & Computer Vision
-* **SymptomNet Engine:** A custom-trained Deep Learning Multi-Layer Perceptron (MLP) built on PyTorch, utilizing `paraphrase-multilingual-MiniLM-L12-v2` SentenceTransformer embeddings for semantic parsing.
-* **Scikit-Learn Fallback:** A robust Random Forest classifier serving as the secondary validation check.
+* **SymptomNet Engine:** A custom-trained Deep Learning Multi-Layer Perceptron (MLP) built on PyTorch, utilizing `paraphrase-multilingual-MiniLM-L12-v2` SentenceTransformer embeddings for semantic parsing. In resource-constrained environments (like Render Free Tier), the system automatically defaults to a lightweight scikit-learn TF-IDF configuration to stay under 100MB RAM.
+* **Scikit-Learn Fallback:** A robust Random Forest classifier serving as the primary diagnostic core under Render Free Tier and as a secondary validation check in standard environments.
 * **On-Device Canvas Pre-Verification:** Before analyzing skin images, a browser-side JS Canvas script downscales the upload to verify structural edge density (blur checks) and color standard deviation (blank inputs). 
 * **Compression Pipeline:** Images are compressed on-the-fly from 5MB+ down to <200KB using `browser-image-compression` to ensure successful transmission over 2G/3G connections.
 
@@ -138,7 +138,7 @@ flowchart TD
 
     subgraph AI ["AI Microservice (FastAPI)"]
         C1["SymptomNet Neural Engine"]
-        C2["Sakhi RAG Engine (Groq Llama-3.1)"]
+        C2["Sakhi RAG Engine (Groq Llama-3.3)"]
         C3["Autonomous Outbreak Radar"]
         C4["On-Device Skin Analyzer"]
     end
@@ -348,6 +348,7 @@ SWASTHAI/
 ```
 
 ### Deployment Readiness & Release Info
+* **Render Free Tier Optimized:** The FastAPI microservice (`swasthai-ai-hub`) is fully optimized to run on the Render Free Tier (under 100MB RAM footprint) by making deep learning dependencies (like PyTorch and SentenceTransformers) optional and automatically falling back to a scikit-learn Random Forest model (89.4% accuracy) and local TF-IDF semantic search.
 * **Serverless Compatibility:** The FastAPI microservice is designed for lazy model loading, minimizing cold start delays and scaling efficiently on Cloud Runs.
 * **Production Build Checks:** The codebase is pre-verified using lint rules in the frontend and unit validation checks in the Python core.
 * **Semantic Versioning:** Releases are published using GitHub release tags matching structural changes from our DevDays phases.

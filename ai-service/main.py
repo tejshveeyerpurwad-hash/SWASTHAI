@@ -3,12 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import joblib
 import os
-import torch
-from model_def import SymptomNet
-from sentence_transformers import SentenceTransformer
 from skin_analyzer import analyze_skin_image
 import re
 from collections import Counter
+
+# Try importing deep learning libraries (optional fallback for free tier compatibility)
+try:
+    import torch
+    from model_def import SymptomNet
+    from sentence_transformers import SentenceTransformer
+    HAS_DEEP_LEARNING = True
+except ImportError:
+    HAS_DEEP_LEARNING = False
 
 # ── Clinical & Gibberish Safeguard Guardrails ──────────────────────────────────
 MEDICAL_KEYWORDS = {
@@ -251,7 +257,9 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
-# ── Load disease model (Deep Learning or RF fallback) ──────────────────────────
+# ── Model Paths ───────────────────────────────────────────────────────────────
+DEEP_MODEL_PATH = "deep_disease_model.pkl"
+MODEL_PATH = "disease_model.pkl"
 
 # ── Lazy Load disease models (Deep Learning or RF fallback) ────────────────────────
 # Global caches (initialized on first request)
@@ -261,6 +269,9 @@ disease_pipeline = None
 
 def _load_deep_model():
     global deep_model_bundle, embedder
+    if not HAS_DEEP_LEARNING:
+        print("[INFO] Deep Learning libraries (torch/sentence_transformers) not installed. Skipping deep model loading.")
+        return
     if deep_model_bundle is None:
         if os.path.exists(DEEP_MODEL_PATH):
             print("[...] Lazy loading Deep Learning Disease Model...")
@@ -290,6 +301,8 @@ def _load_rf_model():
 async def startup_event():
     start_agent_background()
     print("[OK] Agentic Outbreak Monitor started in background thread.")
+    _load_deep_model()
+    _load_rf_model()
     
 
     # Warm up RAG embeddings lazily on first RAG request (removed eager start)
@@ -511,7 +524,7 @@ async def rag_sakhi_chat(data: ChatInput):
             "reply":   result["answer"],
             "sources": result["sources"],   # e.g. ["WHO ANC Guidelines 2016", ...]
             "urgency": result["urgency"],   # P1 / P2 / P3 / P4
-            "engine":  "RAG-Groq (Llama-3.1)",
+            "engine":  "RAG-Groq (Llama-3.3)",
             "grounded": True,
         }
     except Exception as e:
