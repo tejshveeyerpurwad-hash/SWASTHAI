@@ -1118,7 +1118,10 @@ CRITICAL CLINICAL & TRANSLATION SAFEGUARDS:
     });
 
     // Root health endpoint for Render (returns same payload as /health)
-    app.get('/', (req, res) => {
+    app.get('/', (req, res, next) => {
+      if (process.env.NODE_ENV === 'production') {
+        return next();
+      }
       res.json({
         status: 'ok',
         service: 'SwasthAI Guardian Backend',
