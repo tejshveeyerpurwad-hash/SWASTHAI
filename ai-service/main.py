@@ -252,37 +252,38 @@ app.add_middleware(
 )
 
 # ── Load disease model (Deep Learning or RF fallback) ──────────────────────────
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "disease_model.pkl")
-DEEP_MODEL_PATH = os.path.join(os.path.dirname(__file__), "deep_disease_model.pkl")
 
-disease_pipeline = None
+# ── Lazy Load disease models (Deep Learning or RF fallback) ────────────────────────
+# Global caches (initialized on first request)
 deep_model_bundle = None
 embedder = None
+disease_pipeline = None
 
-try:
-    # 1. Load Deep Learning Model (Primary)
-    if os.path.exists(DEEP_MODEL_PATH):
-        print("[...] Loading Deep Learning Disease Model...")
-        deep_model_bundle = joblib.load(DEEP_MODEL_PATH)
-        embedder = SentenceTransformer(deep_model_bundle['embedding_model'])
-        
-        deep_model = SymptomNet(deep_model_bundle['input_dim'], deep_model_bundle['num_classes'])
-        deep_model.load_state_dict(deep_model_bundle['model_state'])
-        deep_model.eval()
-        deep_model_bundle['model'] = deep_model
-        print("[OK] Deep Learning model loaded.")
+def _load_deep_model():
+    global deep_model_bundle, embedder
+    if deep_model_bundle is None:
+        if os.path.exists(DEEP_MODEL_PATH):
+            print("[...] Lazy loading Deep Learning Disease Model...")
+            deep_model_bundle = joblib.load(DEEP_MODEL_PATH)
+            embedder = SentenceTransformer(deep_model_bundle['embedding_model'])
+            deep_model = SymptomNet(deep_model_bundle['input_dim'], deep_model_bundle['num_classes'])
+            deep_model.load_state_dict(deep_model_bundle['model_state'])
+            deep_model.eval()
+            deep_model_bundle['model'] = deep_model
+            print("[OK] Deep Learning model loaded.")
+        else:
+            print("[WARN] Deep model file not found.")
 
-    # 2. Load Random Forest Model (Fallback)
-    if os.path.exists(MODEL_PATH):
-        print("[...] Loading Random Forest Fallback Model...")
-        disease_pipeline = joblib.load(MODEL_PATH)
-        print("[OK] Random Forest model loaded.")
-    
-    if not deep_model_bundle and not disease_pipeline:
-        print("[WARNING] No models found. AI service will be limited.")
+def _load_rf_model():
+    global disease_pipeline
+    if disease_pipeline is None:
+        if os.path.exists(MODEL_PATH):
+            print("[...] Lazy loading Random Forest model...")
+            disease_pipeline = joblib.load(MODEL_PATH)
+            print("[OK] Random Forest model loaded.")
+        else:
+            print("[WARN] RF model file not found.")
 
-except Exception as e:
-    print(f"[ERROR] Model loading failed: {e}")
 
 # ── Start Agentic Outbreak Monitor & Warmup RAG on startup ──────────────────────
 @app.on_event("startup")
@@ -290,14 +291,17 @@ async def startup_event():
     start_agent_background()
     print("[OK] Agentic Outbreak Monitor started in background thread.")
     
-    # Warm up RAG embeddings in a background thread so the first request doesn't timeout
-    try:
-        import threading
-        from rag_service import _get_kb_embeddings
-        threading.Thread(target=_get_kb_embeddings, daemon=True).start()
-        print("[OK] RAG multilingual embeddings warmup started in background thread.")
-    except Exception as e:
-        print(f"[ERROR] Failed to start RAG warmup thread: {e}")
+
+    # Warm up RAG embeddings lazily on first RAG request (removed eager start)
+    # The original warm‑up thread is commented out to avoid loading large embeddings at startup.
+    # try:
+    #     import threading
+    #     from rag_service import _get_kb_embeddings
+    #     threading.Thread(target=_get_kb_embeddings, daemon=True).start()
+    #     print("[OK] RAG multilingual embeddings warmup started in background thread.")
+    # except Exception as e:
+    #     print(f"[ERROR] Failed to start RAG warmup thread: {e}")
+
 
 # ── Data Models ────────────────────────────────────────────────────────────────
 class SymptomInput(BaseModel):
