@@ -9,6 +9,8 @@ import {
   BarChart3, Crosshair, Stethoscope, ShieldCheck, Heart, ArrowRight,
   Server
 } from 'lucide-react';
+import Navbar from '../components/Navbar';
+
 
 const DevDaysJourney = () => {
   const [activeStage, setActiveStage] = useState(0);
@@ -234,6 +236,7 @@ const DevDaysJourney = () => {
 
   return (
     <div className="bg-[#F8FAFC] min-h-screen text-slate-800 font-inter relative overflow-hidden">
+      <Navbar />
       {/* Decorative Blur Orbs */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-200/30 rounded-full blur-[100px] pointer-events-none -z-10" />
       <div className="absolute top-[20%] right-1/4 w-[600px] h-[600px] bg-blue-200/20 rounded-full blur-[120px] pointer-events-none -z-10" />
